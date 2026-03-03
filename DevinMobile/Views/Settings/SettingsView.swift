@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @State private var viewModel = SettingsViewModel()
     @Environment(\.logout) private var logout
+    @Environment(\.persistenceManager) private var persistence
 
     var body: some View {
         NavigationStack {
@@ -38,6 +39,12 @@ struct SettingsView: View {
                         ConsumptionView()
                     } label: {
                         Label("ACU Consumption", systemImage: "chart.bar")
+                    }
+                }
+
+                Section("Data") {
+                    Button("Clear Cache", role: .destructive) {
+                        persistence?.clearAllCache()
                     }
                 }
 

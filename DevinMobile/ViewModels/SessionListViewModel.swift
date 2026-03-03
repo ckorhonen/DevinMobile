@@ -16,11 +16,13 @@ final class SessionListViewModel {
     var isCreatingSession = false
     var showNewSessionSheet = false
     var toastMessage: String?
+    var isRefreshing = false
 
     private var offset = 0
     private var hasMore = true
     private var isLoadingMore = false
     private var userEmail: String? { KeychainService.getUserEmail() }
+    private var persistence: PersistenceManager?
 
     var filteredSessions: [Session] {
         switch filter {
@@ -33,8 +35,30 @@ final class SessionListViewModel {
         }
     }
 
+    func configure(persistence: PersistenceManager) {
+        self.persistence = persistence
+    }
+
     func loadSessions() async {
-        loadingState = .loading
+        // Show cached data immediately if available
+        if let persistence {
+            let cached = persistence.cachedSessions()
+            if !cached.isEmpty {
+                sessions = cached
+                loadingState = .loaded(sessions)
+
+                if !persistence.isSessionCacheStale() {
+                    return
+                }
+
+                isRefreshing = true
+            }
+        }
+
+        if sessions.isEmpty {
+            loadingState = .loading
+        }
+
         offset = 0
         hasMore = true
 
@@ -42,15 +66,47 @@ final class SessionListViewModel {
             let response: SessionListResponse = try await APIClient.shared.perform(
                 .listSessions(limit: 50, offset: 0, userEmail: userEmail)
             )
-            sessions = response.sessions
+            persistence?.upsertSessions(response.sessions)
+            sessions = persistence?.cachedSessions() ?? response.sessions
             offset = response.sessions.count
             hasMore = response.sessions.count >= 50
             loadingState = .loaded(sessions)
         } catch let error as DevinAPIError {
-            loadingState = .error(ErrorInfo(error))
+            if sessions.isEmpty {
+                loadingState = .error(ErrorInfo(error))
+            } else {
+                toastMessage = error.localizedDescription
+            }
         } catch {
-            loadingState = .error(ErrorInfo(message: error.localizedDescription))
+            if sessions.isEmpty {
+                loadingState = .error(ErrorInfo(message: error.localizedDescription))
+            } else {
+                toastMessage = error.localizedDescription
+            }
         }
+        isRefreshing = false
+    }
+
+    func refreshSessions() async {
+        isRefreshing = true
+        offset = 0
+        hasMore = true
+
+        do {
+            let response: SessionListResponse = try await APIClient.shared.perform(
+                .listSessions(limit: 50, offset: 0, userEmail: userEmail)
+            )
+            persistence?.upsertSessions(response.sessions)
+            sessions = persistence?.cachedSessions() ?? response.sessions
+            offset = response.sessions.count
+            hasMore = response.sessions.count >= 50
+            loadingState = .loaded(sessions)
+        } catch let error as DevinAPIError {
+            toastMessage = error.localizedDescription
+        } catch {
+            toastMessage = error.localizedDescription
+        }
+        isRefreshing = false
     }
 
     func loadMoreIfNeeded(currentItem: Session) async {
@@ -64,6 +120,7 @@ final class SessionListViewModel {
             let response: SessionListResponse = try await APIClient.shared.perform(
                 .listSessions(limit: 50, offset: offset, userEmail: userEmail)
             )
+            persistence?.upsertSessions(response.sessions)
             sessions.append(contentsOf: response.sessions)
             offset += response.sessions.count
             hasMore = response.sessions.count >= 50
@@ -100,6 +157,7 @@ final class SessionListViewModel {
     func deleteSession(id: String) async {
         do {
             try await APIClient.shared.performVoid(.deleteSession(id: id))
+            persistence?.deleteSession(id)
             sessions.removeAll { $0.id == id }
             loadingState = .loaded(sessions)
         } catch let error as DevinAPIError {
@@ -110,7 +168,7 @@ final class SessionListViewModel {
     }
 
     func archiveSession(id: String) async {
-        // v1 doesn't have archive — just remove from list locally
+        persistence?.setSessionArchived(id, archived: true)
         sessions.removeAll { $0.id == id }
         loadingState = .loaded(sessions)
     }

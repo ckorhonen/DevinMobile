@@ -4,6 +4,7 @@ struct KnowledgeListView: View {
     @State private var viewModel = KnowledgeListViewModel()
     @State private var showEditor = false
     @State private var editingNote: KnowledgeNote?
+    @Environment(\.persistenceManager) private var persistence
 
     var body: some View {
         NavigationStack {
@@ -55,6 +56,7 @@ struct KnowledgeListView: View {
                 NoteEditorView(note: editingNote)
             }
             .task {
+                if let persistence { viewModel.configure(persistence: persistence) }
                 if viewModel.loadingState.value == nil {
                     await viewModel.loadNotes()
                 }

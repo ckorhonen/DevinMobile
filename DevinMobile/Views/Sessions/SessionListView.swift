@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionListView: View {
     @State private var viewModel = SessionListViewModel()
+    @Environment(\.persistenceManager) private var persistence
 
     var body: some View {
         NavigationStack {
@@ -44,7 +45,7 @@ struct SessionListView: View {
                 }
             }
             .refreshable {
-                await viewModel.loadSessions()
+                await viewModel.refreshSessions()
             }
             .sheet(isPresented: $viewModel.showNewSessionSheet) {
                 NewSessionSheet { prompt, playbookId in
@@ -52,6 +53,7 @@ struct SessionListView: View {
                 }
             }
             .task {
+                if let persistence { viewModel.configure(persistence: persistence) }
                 if viewModel.loadingState.value == nil {
                     await viewModel.loadSessions()
                 }
