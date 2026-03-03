@@ -23,6 +23,7 @@ final class SessionListViewModel {
     private var isLoadingMore = false
     private var userEmail: String? { KeychainService.getUserEmail() }
     private var persistence: PersistenceManager?
+    private var pollingTask: Task<Void, Never>?
 
     var filteredSessions: [Session] {
         switch filter {
@@ -171,5 +172,67 @@ final class SessionListViewModel {
         persistence?.setSessionArchived(id, archived: true)
         sessions.removeAll { $0.id == id }
         loadingState = .loaded(sessions)
+    }
+
+    // MARK: - Polling
+
+    func startPolling() {
+        guard pollingTask == nil else { return }
+        pollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { break }
+                guard let self else { break }
+                await self.pollSessions()
+            }
+        }
+    }
+
+    func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
+    }
+
+    private func pollSessions() async {
+        // Skip if user has paginated beyond page 1 — poll only fetches the
+        // first page and would discard additional pages if assigned.
+        guard offset <= 50 else { return }
+
+        do {
+            let response: SessionListResponse = try await APIClient.shared.perform(
+                .listSessions(limit: 50, offset: 0, userEmail: userEmail)
+            )
+            persistence?.upsertSessions(response.sessions)
+            let fresh = persistence?.cachedSessions() ?? response.sessions
+
+            if sessionsHaveChanges(current: sessions, incoming: fresh) {
+                sessions = fresh
+                loadingState = .loaded(sessions)
+            }
+        } catch {
+            // Silent fail — don't show error toasts for background poll failures
+        }
+    }
+
+    private func sessionsHaveChanges(current: [Session], incoming: [Session]) -> Bool {
+        guard current.count == incoming.count else { return true }
+
+        let currentById = Dictionary(current.map { ($0.sessionId, $0) }, uniquingKeysWith: { _, latest in latest })
+
+        for session in incoming {
+            guard let existing = currentById[session.sessionId] else {
+                return true
+            }
+            if session.hasContentChanges(from: existing) {
+                return true
+            }
+        }
+
+        // Check ordering
+        for (c, i) in zip(current, incoming) {
+            if c.sessionId != i.sessionId { return true }
+        }
+
+        return false
     }
 }

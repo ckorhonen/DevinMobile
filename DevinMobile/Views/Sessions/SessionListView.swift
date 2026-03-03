@@ -3,6 +3,7 @@ import SwiftUI
 struct SessionListView: View {
     @State private var viewModel = SessionListViewModel()
     @Environment(\.persistenceManager) private var persistence
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -56,6 +57,22 @@ struct SessionListView: View {
                 if let persistence { viewModel.configure(persistence: persistence) }
                 if viewModel.loadingState.value == nil {
                     await viewModel.loadSessions()
+                }
+            }
+            .onAppear {
+                viewModel.startPolling()
+            }
+            .onDisappear {
+                viewModel.stopPolling()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                switch newPhase {
+                case .active:
+                    viewModel.startPolling()
+                case .inactive, .background:
+                    viewModel.stopPolling()
+                @unknown default:
+                    break
                 }
             }
         }
