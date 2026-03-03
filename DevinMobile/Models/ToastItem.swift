@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum ToastVariant: Codable, Sendable {
+enum ToastVariant: Codable, Hashable, Sendable {
     case error
     case success
     case info
@@ -22,7 +22,7 @@ enum ToastVariant: Codable, Sendable {
     }
 }
 
-struct ToastItem: Codable, Sendable, Equatable {
+struct ToastItem: Codable, Hashable, Sendable {
     let message: String
     let variant: ToastVariant
 

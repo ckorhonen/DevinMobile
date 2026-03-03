@@ -14,6 +14,7 @@ struct ToastModifier: ViewModifier {
                     ToastView(item: toast) {
                         dismiss()
                     }
+                    .id(toast)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .zIndex(1)
                     .padding(.top, 8)
