@@ -5,6 +5,20 @@ enum SessionFilter: String, CaseIterable, Sendable {
     case all = "All"
     case active = "Active"
     case finished = "Finished"
+
+    private static let defaultsKey = "sessionFilter"
+
+    static var persisted: SessionFilter {
+        guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
+              let value = SessionFilter(rawValue: raw) else {
+            return .active
+        }
+        return value
+    }
+
+    func persist() {
+        UserDefaults.standard.set(rawValue, forKey: Self.defaultsKey)
+    }
 }
 
 @Observable
@@ -12,7 +26,9 @@ enum SessionFilter: String, CaseIterable, Sendable {
 final class SessionListViewModel {
     var sessions: [Session] = []
     var loadingState: LoadingState<[Session]> = .idle
-    var filter: SessionFilter = .all
+    var filter: SessionFilter = SessionFilter.persisted {
+        didSet { filter.persist() }
+    }
     var isCreatingSession = false
     var showNewSessionSheet = false
     var showArchived = false
