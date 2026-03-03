@@ -44,20 +44,26 @@ struct MessageBubbleView: View {
 
             // Messages in turn
             ForEach(messages) { message in
-                Text(message.message)
-                    .font(.body)
-                    .padding(12)
-                    .background {
-                        if isUser {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(.tint.opacity(0.15))
-                        } else {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(.background.secondary)
-                        }
+                Group {
+                    if isUser {
+                        Text(message.message)
+                            .font(.body)
+                    } else {
+                        MarkdownContentView(markdown: message.message)
                     }
-                    .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
-                    .id(message.id)
+                }
+                .padding(12)
+                .background {
+                    if isUser {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.tint.opacity(0.15))
+                    } else {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.background.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
+                .id(message.id)
             }
         }
     }
