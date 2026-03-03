@@ -60,6 +60,7 @@ struct KnowledgeListView: View {
                 await viewModel.loadNotes()
             }
         }
+        .toastOverlay(toast: $viewModel.toast)
     }
 
     private var noteList: some View {

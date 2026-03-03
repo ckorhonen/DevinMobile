@@ -43,6 +43,7 @@ struct PlaybookListView: View {
                 await viewModel.loadPlaybooks()
             }
         }
+        .toastOverlay(toast: $viewModel.toast)
     }
 
     private var playbookList: some View {

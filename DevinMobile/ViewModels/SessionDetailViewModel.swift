@@ -10,7 +10,7 @@ final class SessionDetailViewModel {
     var loadingState: LoadingState<[DevinMessage]> = .idle
     var messageText = ""
     var isSending = false
-    var toastMessage: String?
+    var toast: ToastItem?
     var showTerminateConfirmation = false
     var isTerminating = false
 
@@ -88,13 +88,13 @@ final class SessionDetailViewModel {
             if messages.isEmpty {
                 loadingState = .error(ErrorInfo(error))
             } else {
-                toastMessage = error.localizedDescription
+                toast = .error(error.localizedDescription)
             }
         } catch {
             if messages.isEmpty {
                 loadingState = .error(ErrorInfo(message: error.localizedDescription))
             } else {
-                toastMessage = error.localizedDescription
+                toast = .error(error.localizedDescription)
             }
         }
     }
@@ -114,10 +114,10 @@ final class SessionDetailViewModel {
             // Refresh to get the updated messages
             await loadSessionAndMessages()
         } catch let error as DevinAPIError {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
             messageText = text // Restore on failure
         } catch {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
             messageText = text
         }
 
@@ -152,9 +152,9 @@ final class SessionDetailViewModel {
             }
             stopPolling()
         } catch let error as DevinAPIError {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
         } catch {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
         }
     }
 

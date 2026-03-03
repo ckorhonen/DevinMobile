@@ -9,14 +9,27 @@ struct SettingsView: View {
             List {
                 Section("API Key") {
                     if viewModel.hasValidKey {
-                        HStack {
-                            Label("Connected", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                            Spacer()
-                            Button("Remove", role: .destructive) {
-                                viewModel.showDeleteKeyConfirmation = true
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Label("Connected", systemImage: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                Spacer()
+                                Button("Remove", role: .destructive) {
+                                    viewModel.showDeleteKeyConfirmation = true
+                                }
+                                .font(.caption)
                             }
-                            .font(.caption)
+                            if let email = viewModel.userEmail {
+                                Text(email)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let maskedKey = viewModel.maskedAPIKey {
+                                Text(maskedKey)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .monospaced()
+                            }
                         }
                     } else {
                         NavigationLink {
