@@ -21,7 +21,18 @@ struct SessionRowView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if let pr = session.pullRequest, pr.number != nil {
+                // V3 PR badge with state, falling back to v1
+                if let v3PR = session.primaryPullRequest {
+                    HStack(spacing: 6) {
+                        V3PRBadge(pr: v3PR)
+
+                        if session.allPullRequests.count > 1 {
+                            Text("+\(session.allPullRequests.count - 1) more")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } else if let pr = session.pullRequest, pr.number != nil {
                     PRBadge(pullRequest: pr)
                 }
             }

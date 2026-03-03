@@ -6,6 +6,7 @@ enum KeychainService {
     private static let accountName = "devin-api-key"
     private static let orgAccountName = "devin-org-id"
     private static let emailAccountName = "devin-user-email"
+    private static let githubPATAccountName = "github-pat"
 
     // MARK: - API Key
 
@@ -65,6 +66,26 @@ enum KeychainService {
         getItem(account: emailAccountName)
     }
 
+    // MARK: - GitHub PAT
+
+    @discardableResult
+    static func saveGitHubPAT(_ pat: String) -> Bool {
+        saveItem(account: githubPATAccountName, value: pat)
+    }
+
+    static func getGitHubPAT() -> String? {
+        getItem(account: githubPATAccountName)
+    }
+
+    @discardableResult
+    static func deleteGitHubPAT() -> Bool {
+        deleteItem(account: githubPATAccountName)
+    }
+
+    static var hasGitHubPAT: Bool {
+        getGitHubPAT() != nil
+    }
+
     // MARK: - Shared
 
     @discardableResult
@@ -72,6 +93,7 @@ enum KeychainService {
         deleteItem(account: accountName)
         deleteItem(account: orgAccountName)
         deleteItem(account: emailAccountName)
+        deleteItem(account: githubPATAccountName)
         return true
     }
 

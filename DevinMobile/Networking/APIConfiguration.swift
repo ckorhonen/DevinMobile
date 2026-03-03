@@ -6,4 +6,9 @@ enum APIConfiguration {
     static var token: String? {
         KeychainService.getAPIKey()
     }
+
+    static var v3BaseURL: String? {
+        guard let orgId = KeychainService.getOrgId() else { return nil }
+        return "https://api.devin.ai/v3beta1/organizations/\(orgId)"
+    }
 }

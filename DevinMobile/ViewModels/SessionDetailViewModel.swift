@@ -10,6 +10,8 @@ final class SessionDetailViewModel {
     var loadingState: LoadingState<[DevinMessage]> = .idle
     var messageText = ""
     var isSending = false
+    var isUploading = false
+    var pendingAttachments: [PendingAttachment] = []
     var toast: ToastItem?
     var showTerminateConfirmation = false
     var isTerminating = false
@@ -37,6 +39,10 @@ final class SessionDetailViewModel {
 
     var isSessionActive: Bool {
         session?.isActive ?? false
+    }
+
+    var allPullRequests: [V3PullRequest] {
+        session?.allPullRequests ?? []
     }
 
     init(sessionId: String) {
@@ -78,7 +84,9 @@ final class SessionDetailViewModel {
                 pullRequest: detail.pullRequest,
                 structuredOutput: detail.structuredOutput,
                 playbookId: detail.playbookId,
-                tags: detail.tags
+                tags: detail.tags,
+                pullRequests: nil,
+                isArchived: nil
             )
             messages = detail.messages ?? []
             loadingState = .loaded(messages)
@@ -99,23 +107,81 @@ final class SessionDetailViewModel {
         }
     }
 
+    func addAttachment(_ attachment: PendingAttachment) {
+        guard pendingAttachments.count < 5 else {
+            toast = .error("Maximum 5 attachments")
+            return
+        }
+        pendingAttachments.append(attachment)
+    }
+
+    func removeAttachment(id: UUID) {
+        pendingAttachments.removeAll { $0.id == id }
+    }
+
+    var canSend: Bool {
+        !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        || !pendingAttachments.isEmpty
+    }
+
     func sendMessage() async {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        let attachments = pendingAttachments
+        guard !text.isEmpty || !attachments.isEmpty else { return }
 
         isSending = true
         messageText = ""
+        pendingAttachments = []
 
-        let request = SendMessageRequest(message: text)
+        // Upload attachments first
+        var attachmentURLs: [String] = []
+        if !attachments.isEmpty {
+            isUploading = true
+            for attachment in attachments {
+                do {
+                    let url = try await APIClient.shared.uploadFile(
+                        .uploadAttachment,
+                        fileData: attachment.data,
+                        fileName: attachment.fileName,
+                        mimeType: attachment.mimeType
+                    )
+                    attachmentURLs.append(url)
+                } catch let error as DevinAPIError {
+                    toast = .error("Upload failed: \(error.localizedDescription)")
+                    messageText = text
+                    pendingAttachments = attachments
+                    isSending = false
+                    isUploading = false
+                    return
+                } catch {
+                    toast = .error("Upload failed: \(error.localizedDescription)")
+                    messageText = text
+                    pendingAttachments = attachments
+                    isSending = false
+                    isUploading = false
+                    return
+                }
+            }
+            isUploading = false
+        }
+
+        // Build message with attachment references
+        var messageParts: [String] = []
+        if !text.isEmpty { messageParts.append(text) }
+        for url in attachmentURLs {
+            messageParts.append("ATTACHMENT:\"\(url)\"")
+        }
+        let finalMessage = messageParts.joined(separator: "\n")
+
+        let request = SendMessageRequest(message: finalMessage)
         do {
             try await APIClient.shared.performVoid(
                 .sendMessage(sessionId: sessionId), body: request
             )
-            // Refresh to get the updated messages
             await loadSessionAndMessages()
         } catch let error as DevinAPIError {
             toast = .error(error.localizedDescription)
-            messageText = text // Restore on failure
+            messageText = text
         } catch {
             toast = .error(error.localizedDescription)
             messageText = text

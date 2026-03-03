@@ -17,6 +17,10 @@ final class CachedSession {
     var playbookId: String?
     var tagsJSON: String?
 
+    // V3 fields
+    var pullRequestsJSON: String?
+    var isArchivedFromAPI: Bool = false
+
     // Local-only fields
     var isHidden: Bool = false
     var isArchived: Bool = false
@@ -47,6 +51,14 @@ final class CachedSession {
         } else {
             self.tagsJSON = nil
         }
+        if let prs = api.pullRequests, let data = try? JSONEncoder().encode(prs) {
+            self.pullRequestsJSON = String(data: data, encoding: .utf8)
+        } else {
+            self.pullRequestsJSON = nil
+        }
+        if let archived = api.isArchived {
+            self.isArchivedFromAPI = archived
+        }
         self.lastFetched = Date()
     }
 
@@ -58,6 +70,10 @@ final class CachedSession {
         var pr: PullRequest?
         if prURL != nil || prTitle != nil || prNumber != nil {
             pr = PullRequest(url: prURL, title: prTitle, number: prNumber)
+        }
+        var v3PRs: [V3PullRequest]?
+        if let json = pullRequestsJSON, let data = json.data(using: .utf8) {
+            v3PRs = try? JSONDecoder().decode([V3PullRequest].self, from: data)
         }
         return Session(
             sessionId: sessionId,
@@ -71,7 +87,9 @@ final class CachedSession {
             pullRequest: pr,
             structuredOutput: nil,
             playbookId: playbookId,
-            tags: tags
+            tags: tags,
+            pullRequests: v3PRs,
+            isArchived: isArchived || isArchivedFromAPI
         )
     }
 }

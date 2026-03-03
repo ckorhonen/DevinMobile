@@ -36,17 +36,28 @@ enum APIEndpoint: Sendable {
     case createSecret
     case deleteSecret(id: String)
 
+    // Attachments
+    case uploadAttachment
+    case listSessionAttachments(sessionId: String)
+
     // Consumption
     case consumption(dateStart: String?, dateEnd: String?)
 
+    // V3 endpoints
+    case listSessionsV3(first: Int?, after: String?)
+
     var path: String {
         switch self {
-        case .listSessions, .createSession:
+        case .listSessions, .createSession, .listSessionsV3:
             return "/sessions"
         case .getSession(let id), .deleteSession(let id):
             return "/sessions/\(id)"
         case .sendMessage(let sessionId):
             return "/sessions/\(sessionId)/message"
+        case .uploadAttachment:
+            return "/attachments"
+        case .listSessionAttachments(let sessionId):
+            return "/sessions/\(sessionId)/attachments"
         case .listKnowledge, .createNote:
             return "/knowledge"
         case .updateNote(let id), .deleteNote(let id):
@@ -67,9 +78,11 @@ enum APIEndpoint: Sendable {
     var method: HTTPMethod {
         switch self {
         case .listSessions, .getSession, .listKnowledge,
-             .listPlaybooks, .getPlaybook, .listSecrets, .consumption:
+             .listPlaybooks, .getPlaybook, .listSecrets, .consumption,
+             .listSessionsV3, .listSessionAttachments:
             return .get
-        case .createSession, .sendMessage, .createNote, .createPlaybook, .createSecret:
+        case .createSession, .sendMessage, .createNote, .createPlaybook, .createSecret,
+             .uploadAttachment:
             return .post
         case .updateNote, .updatePlaybook:
             return .put
@@ -88,6 +101,9 @@ enum APIEndpoint: Sendable {
         case .consumption(let dateStart, let dateEnd):
             if let dateStart { items.append(URLQueryItem(name: "date_start", value: dateStart)) }
             if let dateEnd { items.append(URLQueryItem(name: "date_end", value: dateEnd)) }
+        case .listSessionsV3(let first, let after):
+            if let first { items.append(URLQueryItem(name: "first", value: String(first))) }
+            if let after { items.append(URLQueryItem(name: "after", value: after)) }
         default:
             break
         }
@@ -95,6 +111,11 @@ enum APIEndpoint: Sendable {
     }
 
     var baseURL: String {
-        APIConfiguration.baseURL
+        switch self {
+        case .listSessionsV3:
+            return APIConfiguration.v3BaseURL ?? APIConfiguration.baseURL
+        default:
+            return APIConfiguration.baseURL
+        }
     }
 }

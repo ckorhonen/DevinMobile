@@ -18,7 +18,7 @@ final class PersistenceManager {
 
     func cachedSessions() -> [Session] {
         var descriptor = FetchDescriptor<CachedSession>(
-            predicate: #Predicate { !$0.isHidden && !$0.isArchived },
+            predicate: #Predicate { !$0.isHidden && !$0.isArchived && !$0.isArchivedFromAPI },
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
         descriptor.fetchLimit = 200
@@ -54,7 +54,7 @@ final class PersistenceManager {
 
     func cachedArchivedSessions() -> [Session] {
         let descriptor = FetchDescriptor<CachedSession>(
-            predicate: #Predicate { $0.isArchived && !$0.isHidden },
+            predicate: #Predicate { ($0.isArchived || $0.isArchivedFromAPI) && !$0.isHidden },
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
         let cached = (try? context.fetch(descriptor)) ?? []

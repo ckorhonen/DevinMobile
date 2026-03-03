@@ -40,6 +40,42 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("GitHub") {
+                    if viewModel.hasGitHubPAT {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Label("Connected", systemImage: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                Spacer()
+                                Button("Remove", role: .destructive) {
+                                    viewModel.showDeleteGitHubPATConfirmation = true
+                                }
+                                .font(.caption)
+                            }
+                            if let masked = viewModel.maskedGitHubPAT {
+                                Text(masked)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .monospaced()
+                            }
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Add a GitHub token for richer PR details.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            SecureField("ghp_...", text: $viewModel.githubPATInput)
+                                .textContentType(.password)
+
+                            Button("Save Token") {
+                                _ = viewModel.saveGitHubPAT()
+                            }
+                            .disabled(viewModel.githubPATInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                    }
+                }
+
                 Section("Features") {
                     NavigationLink {
                         KnowledgeListView()
@@ -91,6 +127,13 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("You'll need to re-enter your API key to use the app.")
+            }
+            .confirmationDialog("Remove GitHub Token?", isPresented: $viewModel.showDeleteGitHubPATConfirmation) {
+                Button("Remove", role: .destructive) {
+                    viewModel.deleteGitHubPAT()
+                }
+            } message: {
+                Text("PR details will no longer be enriched with GitHub data.")
             }
             .onAppear {
                 viewModel.checkExistingKey()

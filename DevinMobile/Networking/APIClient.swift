@@ -87,4 +87,60 @@ actor APIClient {
             throw .serverError(statusCode: httpResponse.statusCode)
         }
     }
+
+    func uploadFile(
+        _ endpoint: APIEndpoint,
+        fileData: Data,
+        fileName: String,
+        mimeType: String
+    ) async throws(DevinAPIError) -> String {
+        guard let token = APIConfiguration.token else {
+            throw .noAuthToken
+        }
+
+        let request = try RequestBuilder.buildMultipart(
+            endpoint: endpoint,
+            fileData: fileData,
+            fileName: fileName,
+            mimeType: mimeType,
+            token: token
+        )
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw .networkError(error)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw .networkError(URLError(.badServerResponse))
+        }
+
+        switch httpResponse.statusCode {
+        case 200...299:
+            break
+        case 401, 403:
+            throw .unauthorized
+        case 429:
+            throw .rateLimited
+        case 404:
+            throw .notFound
+        default:
+            throw .serverError(statusCode: httpResponse.statusCode)
+        }
+
+        // API returns a URL string
+        guard let urlString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            throw .decodingError(URLError(.cannotParseResponse))
+        }
+
+        // Handle both bare string and JSON-wrapped responses
+        if urlString.hasPrefix("\""), let decoded = try? JSONDecoder().decode(String.self, from: data) {
+            return decoded
+        }
+
+        return urlString
+    }
 }

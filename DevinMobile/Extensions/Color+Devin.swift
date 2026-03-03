@@ -7,6 +7,17 @@ extension Color {
     static let devinGray = Color(red: 0.6, green: 0.6, blue: 0.6)
     static let devinRed = Color(red: 0.95, green: 0.3, blue: 0.25)
     static let devinOrange = Color(red: 0.95, green: 0.6, blue: 0.15)
+    static let devinPurple = Color(red: 0.55, green: 0.35, blue: 0.85)
+}
+
+extension PRState {
+    var color: Color {
+        switch self {
+        case .open: .devinGreen
+        case .merged: .devinPurple
+        case .closed: .devinRed
+        }
+    }
 }
 
 extension SessionStatus {

@@ -93,14 +93,20 @@ struct SessionListView: View {
 
     private var sessionList: some View {
         List {
-            Picker("Filter", selection: $viewModel.filter) {
-                ForEach(SessionFilter.allCases, id: \.self) { filter in
-                    Text(filter.rawValue).tag(filter)
+            VStack(alignment: .leading, spacing: 8) {
+                StatusFilterChips(selected: $viewModel.statusFilter)
+
+                if !viewModel.availableRepos.isEmpty {
+                    RepoFilterButton(
+                        repos: viewModel.availableRepos,
+                        selectedRepo: $viewModel.selectedRepo
+                    )
+                    .padding(.horizontal)
                 }
             }
-            .pickerStyle(.segmented)
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets())
 
             ForEach(viewModel.filteredSessions) { session in
                 NavigationLink(value: session) {
@@ -149,22 +155,27 @@ struct SessionListView: View {
                 }
                 .buttonStyle(.bordered)
             }
-        } else if viewModel.filter == .active {
+        } else if viewModel.statusFilter == .working {
             ContentUnavailableView {
                 Label("No Active Sessions", systemImage: "bubbles.and.sparkles")
             } description: {
-                Text("Start a new session or check finished sessions.")
+                Text("Start a new session or check other filters.")
             } actions: {
                 Button("New Session") {
                     viewModel.showNewSessionSheet = true
                 }
                 .buttonStyle(.borderedProminent)
             }
-        } else if viewModel.filter == .finished {
+        } else if viewModel.statusFilter != .all {
             ContentUnavailableView {
-                Label("No Finished Sessions", systemImage: "checkmark.circle")
+                Label("No \(viewModel.statusFilter.rawValue) Sessions", systemImage: "line.3.horizontal.decrease.circle")
             } description: {
-                Text("Completed sessions will appear here.")
+                Text("No sessions match this filter.")
+            } actions: {
+                Button("Show All") {
+                    viewModel.statusFilter = .all
+                }
+                .buttonStyle(.bordered)
             }
         } else {
             ContentUnavailableView {

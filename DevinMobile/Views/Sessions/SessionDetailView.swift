@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionDetailView: View {
     @State private var viewModel: SessionDetailViewModel
+    @State private var showPRSheet = false
     @FocusState private var isComposerFocused: Bool
     @Environment(\.persistenceManager) private var persistence
     @Environment(\.openURL) private var openURL
@@ -14,10 +15,10 @@ struct SessionDetailView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            messageList
-            composerBar
-        }
+        messageList
+            .safeAreaInset(edge: .bottom) {
+                ComposerView(viewModel: viewModel, isFocused: $isComposerFocused)
+            }
         .navigationTitle(viewModel.session?.title ?? "Session")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -32,12 +33,24 @@ struct SessionDetailView: View {
                 }
             }
             ToolbarItemGroup(placement: .primaryAction) {
-                if let pr = viewModel.session?.pullRequest,
-                   let webURL = pr.gitHubWebURL {
+                if !viewModel.allPullRequests.isEmpty {
                     Button {
-                        openGitHubPR(appURL: pr.gitHubAppURL, webURL: webURL)
+                        let prs = viewModel.allPullRequests
+                        if prs.count == 1, let webURL = prs[0].gitHubWebURL {
+                            openGitHubPR(appURL: prs[0].gitHubAppURL, webURL: webURL)
+                        } else {
+                            showPRSheet = true
+                        }
                     } label: {
-                        Label("Open on GitHub", systemImage: "arrow.triangle.pull")
+                        HStack(spacing: 4) {
+                            if let state = viewModel.allPullRequests.first?.resolvedState {
+                                Circle()
+                                    .fill(state.color)
+                                    .frame(width: 8, height: 8)
+                            }
+                            Label("Pull Requests", systemImage: "arrow.triangle.pull")
+                                .labelStyle(.iconOnly)
+                        }
                     }
                 }
 
@@ -76,6 +89,9 @@ struct SessionDetailView: View {
             Text("This will permanently stop Devin from working on this session. This cannot be undone.")
         }
         .toastOverlay(toast: $viewModel.toast)
+        .sheet(isPresented: $showPRSheet) {
+            PRDetailSheet(pullRequests: viewModel.allPullRequests)
+        }
     }
 
     @ViewBuilder
@@ -165,24 +181,4 @@ struct SessionDetailView: View {
         }
     }
 
-    private var composerBar: some View {
-        HStack(spacing: 12) {
-            TextField("Message Devin...", text: $viewModel.messageText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...5)
-                .focused($isComposerFocused)
-
-            Button {
-                Task { await viewModel.sendMessage() }
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title2)
-                    .symbolRenderingMode(.hierarchical)
-            }
-            .disabled(viewModel.messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSending)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.regularMaterial)
-    }
 }

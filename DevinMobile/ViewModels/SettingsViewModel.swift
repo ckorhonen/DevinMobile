@@ -10,8 +10,12 @@ final class SettingsViewModel {
     var secrets: [Secret] = []
     var secretsLoadingState: LoadingState<[Secret]> = .idle
     var showDeleteKeyConfirmation = false
+    var showDeleteGitHubPATConfirmation = false
     var userEmail: String?
     var maskedAPIKey: String?
+    var githubPATInput = ""
+    var hasGitHubPAT = false
+    var maskedGitHubPAT: String?
 
     func checkExistingKey() {
         hasValidKey = KeychainService.hasAPIKey
@@ -21,6 +25,40 @@ final class SettingsViewModel {
         } else {
             maskedAPIKey = nil
         }
+        checkGitHubPAT()
+    }
+
+    // MARK: - GitHub PAT
+
+    func checkGitHubPAT() {
+        hasGitHubPAT = KeychainService.hasGitHubPAT
+        if let pat = KeychainService.getGitHubPAT(), pat.count > 12 {
+            maskedGitHubPAT = "\(pat.prefix(8))...\(pat.suffix(4))"
+        } else {
+            maskedGitHubPAT = nil
+        }
+    }
+
+    func saveGitHubPAT() -> Bool {
+        let pat = githubPATInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !pat.isEmpty else {
+            errorMessage = "GitHub token cannot be empty"
+            return false
+        }
+        if KeychainService.saveGitHubPAT(pat) {
+            githubPATInput = ""
+            checkGitHubPAT()
+            return true
+        } else {
+            errorMessage = "Failed to save GitHub token"
+            return false
+        }
+    }
+
+    func deleteGitHubPAT() {
+        KeychainService.deleteGitHubPAT()
+        hasGitHubPAT = false
+        maskedGitHubPAT = nil
     }
 
     func saveAPIKey() -> Bool {
