@@ -4,6 +4,7 @@ struct SessionDetailView: View {
     @State private var viewModel: SessionDetailViewModel
     @FocusState private var isComposerFocused: Bool
     @Environment(\.persistenceManager) private var persistence
+    @Environment(\.openURL) private var openURL
 
     init(sessionId: String, initialSession: Session? = nil) {
         _viewModel = State(initialValue: SessionDetailViewModel(sessionId: sessionId))
@@ -30,7 +31,16 @@ struct SessionDetailView: View {
                     }
                 }
             }
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if let pr = viewModel.session?.pullRequest,
+                   let webURL = pr.gitHubWebURL {
+                    Button {
+                        openGitHubPR(appURL: pr.gitHubAppURL, webURL: webURL)
+                    } label: {
+                        Label("Open on GitHub", systemImage: "arrow.triangle.pull")
+                    }
+                }
+
                 if let url = viewModel.session?.url, let webURL = URL(string: url) {
                     Link(destination: webURL) {
                         Label("Open in Browser", systemImage: "safari")
@@ -122,6 +132,18 @@ struct SessionDetailView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func openGitHubPR(appURL: URL?, webURL: URL) {
+        if let appURL {
+            openURL(appURL) { accepted in
+                if !accepted {
+                    openURL(webURL)
+                }
+            }
+        } else {
+            openURL(webURL)
         }
     }
 
