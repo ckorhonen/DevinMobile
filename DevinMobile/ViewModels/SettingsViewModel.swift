@@ -10,9 +10,17 @@ final class SettingsViewModel {
     var secrets: [Secret] = []
     var secretsLoadingState: LoadingState<[Secret]> = .idle
     var showDeleteKeyConfirmation = false
+    var userEmail: String?
+    var maskedAPIKey: String?
 
     func checkExistingKey() {
         hasValidKey = KeychainService.hasAPIKey
+        userEmail = KeychainService.getUserEmail()
+        if let key = KeychainService.getAPIKey(), key.count > 12 {
+            maskedAPIKey = "\(key.prefix(8))...\(key.suffix(4))"
+        } else {
+            maskedAPIKey = nil
+        }
     }
 
     func saveAPIKey() -> Bool {
