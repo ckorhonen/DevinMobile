@@ -1,17 +1,46 @@
 import Foundation
 import SwiftUI
 
-enum SessionFilter: String, CaseIterable, Sendable {
+// MARK: - Status Filter
+
+enum SessionStatusFilter: String, CaseIterable, Sendable, Identifiable {
     case all = "All"
-    case active = "Active"
+    case working = "Working"
+    case blocked = "Blocked"
     case finished = "Finished"
+    case stopped = "Stopped"
+    case expired = "Expired"
 
-    private static let defaultsKey = "sessionFilter"
+    var id: String { rawValue }
 
-    static var persisted: SessionFilter {
+    var matchingStatuses: Set<SessionStatus> {
+        switch self {
+        case .all: Set(SessionStatus.allCases)
+        case .working: [.running, .working, .resumed, .resumeRequested, .resumeRequestedFrontend]
+        case .blocked: [.blocked]
+        case .finished: [.finished]
+        case .stopped: [.stopped]
+        case .expired: [.expired, .suspendRequested, .suspendRequestedFrontend]
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .all: .primary
+        case .working: .devinGreen
+        case .blocked: .devinYellow
+        case .finished: .devinBlue
+        case .stopped: .devinRed
+        case .expired: .devinGray
+        }
+    }
+
+    private static let defaultsKey = "sessionStatusFilter"
+
+    static var persisted: SessionStatusFilter {
         guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-              let value = SessionFilter(rawValue: raw) else {
-            return .active
+              let value = SessionStatusFilter(rawValue: raw) else {
+            return .all
         }
         return value
     }
@@ -21,43 +50,76 @@ enum SessionFilter: String, CaseIterable, Sendable {
     }
 }
 
+// MARK: - Repo Filter Sentinel
+
+enum RepoFilter: Equatable, Sendable {
+    case all
+    case repo(String)
+    case noPR
+}
+
+// MARK: - View Model
+
 @Observable
 @MainActor
 final class SessionListViewModel {
     var sessions: [Session] = []
     var loadingState: LoadingState<[Session]> = .idle
-    var filter: SessionFilter = SessionFilter.persisted {
-        didSet { filter.persist() }
+    var statusFilter: SessionStatusFilter = SessionStatusFilter.persisted {
+        didSet { statusFilter.persist() }
     }
+    var selectedRepo: RepoFilter = .all
     var isCreatingSession = false
     var showNewSessionSheet = false
     var showArchived = false
     var toast: ToastItem?
     var isRefreshing = false
 
-    private var offset = 0
+    // Pagination
+    private var endCursor: String?
+    private var v1Offset = 0
     private var hasMore = true
     private var isLoadingMore = false
+    private var hasPaginatedBeyondFirstPage = false
+    private var useV3: Bool { APIConfiguration.v3BaseURL != nil }
     private var userEmail: String? { KeychainService.getUserEmail() }
     private var persistence: PersistenceManager?
     private var pollingTask: Task<Void, Never>?
 
+    /// Unique repos extracted from loaded sessions' PR URLs.
+    var availableRepos: [String] {
+        let repos = sessions.compactMap(\.repoFullName)
+        return Array(Set(repos)).sorted()
+    }
+
     var filteredSessions: [Session] {
         let base = showArchived ? (persistence?.cachedArchivedSessions() ?? []) : sessions
 
-        switch filter {
-        case .all:
-            return base
-        case .active:
-            return base.filter { $0.isActive }
-        case .finished:
-            return base.filter { !$0.isActive }
+        var result = base
+
+        // Status filter
+        if statusFilter != .all {
+            result = result.filter { statusFilter.matchingStatuses.contains($0.resolvedStatus) }
         }
+
+        // Repo filter
+        switch selectedRepo {
+        case .all:
+            break
+        case .repo(let name):
+            result = result.filter { $0.repoFullName == name }
+        case .noPR:
+            result = result.filter { $0.allPullRequests.isEmpty }
+        }
+
+        return result
     }
 
     func configure(persistence: PersistenceManager) {
         self.persistence = persistence
     }
+
+    // MARK: - Loading
 
     func loadSessions() async {
         // Show cached data immediately if available
@@ -79,16 +141,59 @@ final class SessionListViewModel {
             loadingState = .loading
         }
 
-        offset = 0
+        endCursor = nil
+        v1Offset = 0
         hasMore = true
+        hasPaginatedBeyondFirstPage = false
 
+        if useV3 {
+            await loadSessionsV3()
+        } else {
+            await loadSessionsV1()
+        }
+        isRefreshing = false
+    }
+
+    func refreshSessions() async {
+        isRefreshing = true
+        endCursor = nil
+        v1Offset = 0
+        hasMore = true
+        hasPaginatedBeyondFirstPage = false
+
+        if useV3 {
+            await loadSessionsV3()
+        } else {
+            await loadSessionsV1()
+        }
+        isRefreshing = false
+    }
+
+    private func loadSessionsV3() async {
+        do {
+            let response: PaginatedResponse<V3SessionItem> = try await APIClient.shared.perform(
+                .listSessionsV3(first: 50, after: nil)
+            )
+            let mapped = response.items.map { $0.toSession() }
+            persistence?.upsertSessions(mapped)
+            sessions = persistence?.cachedSessions() ?? mapped
+            endCursor = response.endCursor
+            hasMore = response.hasNextPage
+            loadingState = .loaded(sessions)
+        } catch {
+            // Fall back to v1 on failure
+            await loadSessionsV1()
+        }
+    }
+
+    private func loadSessionsV1() async {
         do {
             let response: SessionListResponse = try await APIClient.shared.perform(
                 .listSessions(limit: 50, offset: 0, userEmail: userEmail)
             )
             persistence?.upsertSessions(response.sessions)
             sessions = persistence?.cachedSessions() ?? response.sessions
-            offset = response.sessions.count
+            v1Offset = response.sessions.count
             hasMore = response.sessions.count >= 50
             loadingState = .loaded(sessions)
         } catch let error as DevinAPIError {
@@ -104,29 +209,6 @@ final class SessionListViewModel {
                 toast = .error(error.localizedDescription)
             }
         }
-        isRefreshing = false
-    }
-
-    func refreshSessions() async {
-        isRefreshing = true
-        offset = 0
-        hasMore = true
-
-        do {
-            let response: SessionListResponse = try await APIClient.shared.perform(
-                .listSessions(limit: 50, offset: 0, userEmail: userEmail)
-            )
-            persistence?.upsertSessions(response.sessions)
-            sessions = persistence?.cachedSessions() ?? response.sessions
-            offset = response.sessions.count
-            hasMore = response.sessions.count >= 50
-            loadingState = .loaded(sessions)
-        } catch let error as DevinAPIError {
-            toast = .error(error.localizedDescription)
-        } catch {
-            toast = .error(error.localizedDescription)
-        }
-        isRefreshing = false
     }
 
     func loadMoreIfNeeded(currentItem: Session) async {
@@ -136,19 +218,38 @@ final class SessionListViewModel {
         isLoadingMore = true
         defer { isLoadingMore = false }
 
-        do {
-            let response: SessionListResponse = try await APIClient.shared.perform(
-                .listSessions(limit: 50, offset: offset, userEmail: userEmail)
-            )
-            persistence?.upsertSessions(response.sessions)
-            sessions.append(contentsOf: response.sessions)
-            offset += response.sessions.count
-            hasMore = response.sessions.count >= 50
-            loadingState = .loaded(sessions)
-        } catch {
-            // Silent fail on load-more
+        if useV3, let cursor = endCursor {
+            do {
+                let response: PaginatedResponse<V3SessionItem> = try await APIClient.shared.perform(
+                    .listSessionsV3(first: 50, after: cursor)
+                )
+                let mapped = response.items.map { $0.toSession() }
+                persistence?.upsertSessions(mapped)
+                sessions.append(contentsOf: mapped)
+                endCursor = response.endCursor
+                hasMore = response.hasNextPage
+                hasPaginatedBeyondFirstPage = true
+                loadingState = .loaded(sessions)
+            } catch {
+                // Silent fail
+            }
+        } else {
+            do {
+                let response: SessionListResponse = try await APIClient.shared.perform(
+                    .listSessions(limit: 50, offset: v1Offset, userEmail: userEmail)
+                )
+                persistence?.upsertSessions(response.sessions)
+                sessions.append(contentsOf: response.sessions)
+                v1Offset += response.sessions.count
+                hasMore = response.sessions.count >= 50
+                loadingState = .loaded(sessions)
+            } catch {
+                // Silent fail
+            }
         }
     }
+
+    // MARK: - Create / Archive
 
     func createSession(prompt: String, playbookId: String? = nil) async {
         isCreatingSession = true
@@ -208,23 +309,43 @@ final class SessionListViewModel {
     }
 
     private func pollSessions() async {
-        // Skip if user has paginated beyond page 1 — poll only fetches the
-        // first page and would discard additional pages if assigned.
-        guard offset <= 50 else { return }
+        if useV3 {
+            // Skip if user has paginated beyond page 1 — poll only fetches the
+            // first page and would discard additional pages if assigned.
+            guard !hasPaginatedBeyondFirstPage else { return }
 
-        do {
-            let response: SessionListResponse = try await APIClient.shared.perform(
-                .listSessions(limit: 50, offset: 0, userEmail: userEmail)
-            )
-            persistence?.upsertSessions(response.sessions)
-            let fresh = persistence?.cachedSessions() ?? response.sessions
+            do {
+                let response: PaginatedResponse<V3SessionItem> = try await APIClient.shared.perform(
+                    .listSessionsV3(first: 50, after: nil)
+                )
+                let mapped = response.items.map { $0.toSession() }
+                persistence?.upsertSessions(mapped)
+                let fresh = persistence?.cachedSessions() ?? mapped
 
-            if sessionsHaveChanges(current: sessions, incoming: fresh) {
-                sessions = fresh
-                loadingState = .loaded(sessions)
+                if sessionsHaveChanges(current: sessions, incoming: fresh) {
+                    sessions = fresh
+                    loadingState = .loaded(sessions)
+                }
+            } catch {
+                // Silent fail
             }
-        } catch {
-            // Silent fail — don't show error toasts for background poll failures
+        } else {
+            guard v1Offset <= 50 else { return }
+
+            do {
+                let response: SessionListResponse = try await APIClient.shared.perform(
+                    .listSessions(limit: 50, offset: 0, userEmail: userEmail)
+                )
+                persistence?.upsertSessions(response.sessions)
+                let fresh = persistence?.cachedSessions() ?? response.sessions
+
+                if sessionsHaveChanges(current: sessions, incoming: fresh) {
+                    sessions = fresh
+                    loadingState = .loaded(sessions)
+                }
+            } catch {
+                // Silent fail
+            }
         }
     }
 
@@ -242,7 +363,6 @@ final class SessionListViewModel {
             }
         }
 
-        // Check ordering
         for (c, i) in zip(current, incoming) {
             if c.sessionId != i.sessionId { return true }
         }
