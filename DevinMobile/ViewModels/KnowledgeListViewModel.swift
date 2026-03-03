@@ -5,7 +5,7 @@ import Foundation
 final class KnowledgeListViewModel {
     var notes: [KnowledgeNote] = []
     var loadingState: LoadingState<[KnowledgeNote]> = .idle
-    var toastMessage: String?
+    var toast: ToastItem?
 
     private var persistence: PersistenceManager?
 
@@ -36,13 +36,13 @@ final class KnowledgeListViewModel {
             if notes.isEmpty {
                 loadingState = .error(ErrorInfo(error))
             } else {
-                toastMessage = error.localizedDescription
+                toast = .error(error.localizedDescription)
             }
         } catch {
             if notes.isEmpty {
                 loadingState = .error(ErrorInfo(message: error.localizedDescription))
             } else {
-                toastMessage = error.localizedDescription
+                toast = .error(error.localizedDescription)
             }
         }
     }
@@ -54,9 +54,9 @@ final class KnowledgeListViewModel {
             notes.removeAll { $0.id == id }
             loadingState = .loaded(notes)
         } catch let error as DevinAPIError {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
         } catch {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
         }
     }
 }

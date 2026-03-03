@@ -87,6 +87,7 @@ struct SessionListView: View {
                     break
                 }
             }
+            .toastOverlay(toast: $viewModel.toast)
         }
     }
 
