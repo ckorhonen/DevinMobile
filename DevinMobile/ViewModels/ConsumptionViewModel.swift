@@ -17,7 +17,7 @@ final class ConsumptionViewModel {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let end = formatter.string(from: .now)
-        let start = formatter.string(from: Calendar.current.date(byAdding: .day, value: -30, to: .now)!)
+        let start = formatter.string(from: Calendar.current.date(byAdding: .day, value: -30, to: .now) ?? .now)
 
         do {
             let response: ConsumptionResponse = try await APIClient.shared.perform(
@@ -33,11 +33,20 @@ final class ConsumptionViewModel {
 
     private func loadSessionBasedConsumption() async {
         do {
-            let response: SessionListResponse = try await APIClient.shared.perform(
-                .listSessions(limit: 50, offset: 0, userEmail: nil)
-            )
+            // Paginate through all sessions to get accurate totals
+            var allSessions: [Session] = []
+            let pageSize = 50
+            var offset = 0
+            while true {
+                let response: SessionListResponse = try await APIClient.shared.perform(
+                    .listSessions(limit: pageSize, offset: offset, userEmail: nil)
+                )
+                allSessions.append(contentsOf: response.sessions)
+                if response.sessions.count < pageSize { break }
+                offset += pageSize
+            }
 
-            let items = response.sessions.compactMap { session -> SessionACUItem? in
+            let items = allSessions.compactMap { session -> SessionACUItem? in
                 guard let acus = session.acusConsumed, acus > 0 else { return nil }
                 return SessionACUItem(
                     sessionId: session.sessionId,

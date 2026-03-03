@@ -70,7 +70,7 @@ struct ConsumptionView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "info.circle.fill")
                         .foregroundStyle(.blue)
-                    Text("Showing estimated usage from recent sessions. Detailed daily breakdown requires an enterprise API key.")
+                    Text("Showing estimated usage from your sessions. Detailed daily breakdown requires an enterprise API key.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
