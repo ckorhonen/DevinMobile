@@ -44,6 +44,16 @@ struct SessionListView: View {
                         Label("New Session", systemImage: "plus")
                     }
                 }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button {
+                        viewModel.showArchived.toggle()
+                    } label: {
+                        Label(
+                            viewModel.showArchived ? "Show Active" : "Show Archived",
+                            systemImage: viewModel.showArchived ? "tray.full" : "archivebox"
+                        )
+                    }
+                }
             }
             .refreshable {
                 await viewModel.refreshSessions()
@@ -94,19 +104,21 @@ struct SessionListView: View {
                     SessionRowView(session: session)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        Task { await viewModel.deleteSession(id: session.id) }
-                    } label: {
-                        Label("Delete", systemImage: "trash")
+                    if viewModel.showArchived {
+                        Button {
+                            viewModel.unarchiveSession(id: session.id)
+                        } label: {
+                            Label("Unarchive", systemImage: "arrow.uturn.backward")
+                        }
+                        .tint(.devinBlue)
+                    } else {
+                        Button {
+                            viewModel.archiveSession(id: session.id)
+                        } label: {
+                            Label("Archive", systemImage: "archivebox")
+                        }
+                        .tint(.orange)
                     }
-                }
-                .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                    Button {
-                        Task { await viewModel.archiveSession(id: session.id) }
-                    } label: {
-                        Label("Archive", systemImage: "archivebox")
-                    }
-                    .tint(.orange)
                 }
                 .task {
                     await viewModel.loadMoreIfNeeded(currentItem: session)
@@ -119,16 +131,30 @@ struct SessionListView: View {
         }
     }
 
+    @ViewBuilder
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No Sessions", systemImage: "bubbles.and.sparkles")
-        } description: {
-            Text("Start a new session to get Devin working on something.")
-        } actions: {
-            Button("New Session") {
-                viewModel.showNewSessionSheet = true
+        if viewModel.showArchived {
+            ContentUnavailableView {
+                Label("No Archived Sessions", systemImage: "archivebox")
+            } description: {
+                Text("Sessions you archive will appear here.")
+            } actions: {
+                Button("Show Active Sessions") {
+                    viewModel.showArchived = false
+                }
+                .buttonStyle(.bordered)
             }
-            .buttonStyle(.borderedProminent)
+        } else {
+            ContentUnavailableView {
+                Label("No Sessions", systemImage: "bubbles.and.sparkles")
+            } description: {
+                Text("Start a new session to get Devin working on something.")
+            } actions: {
+                Button("New Session") {
+                    viewModel.showNewSessionSheet = true
+                }
+                .buttonStyle(.borderedProminent)
+            }
         }
     }
 }

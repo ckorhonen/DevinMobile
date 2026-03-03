@@ -82,6 +82,3 @@ struct CreateSessionResponse: Decodable, Sendable {
     let isNewSession: Bool?
 }
 
-struct ArchiveSessionRequest: Encodable, Sendable {
-    let sessionIds: [String]
-}

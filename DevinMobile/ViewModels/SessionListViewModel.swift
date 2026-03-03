@@ -15,6 +15,7 @@ final class SessionListViewModel {
     var filter: SessionFilter = .all
     var isCreatingSession = false
     var showNewSessionSheet = false
+    var showArchived = false
     var toastMessage: String?
     var isRefreshing = false
 
@@ -26,13 +27,15 @@ final class SessionListViewModel {
     private var pollingTask: Task<Void, Never>?
 
     var filteredSessions: [Session] {
+        let base = showArchived ? (persistence?.cachedArchivedSessions() ?? []) : sessions
+
         switch filter {
         case .all:
-            return sessions
+            return base
         case .active:
-            return sessions.filter { $0.isActive }
+            return base.filter { $0.isActive }
         case .finished:
-            return sessions.filter { !$0.isActive }
+            return base.filter { !$0.isActive }
         }
     }
 
@@ -155,23 +158,18 @@ final class SessionListViewModel {
         }
     }
 
-    func deleteSession(id: String) async {
-        do {
-            try await APIClient.shared.performVoid(.deleteSession(id: id))
-            persistence?.deleteSession(id)
-            sessions.removeAll { $0.id == id }
-            loadingState = .loaded(sessions)
-        } catch let error as DevinAPIError {
-            toastMessage = error.localizedDescription
-        } catch {
-            toastMessage = error.localizedDescription
-        }
-    }
-
-    func archiveSession(id: String) async {
+    func archiveSession(id: String) {
         persistence?.setSessionArchived(id, archived: true)
         sessions.removeAll { $0.id == id }
         loadingState = .loaded(sessions)
+    }
+
+    func unarchiveSession(id: String) {
+        persistence?.setSessionArchived(id, archived: false)
+        if let persistence {
+            sessions = persistence.cachedSessions()
+            loadingState = .loaded(sessions)
+        }
     }
 
     // MARK: - Polling

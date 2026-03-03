@@ -37,6 +37,13 @@ struct SessionDetailView: View {
                     }
                 }
             }
+            ToolbarItem(placement: .secondaryAction) {
+                if viewModel.isSessionActive {
+                    Button("Terminate Session", role: .destructive) {
+                        viewModel.showTerminateConfirmation = true
+                    }
+                }
+            }
         }
         .task {
             if let persistence { viewModel.configure(persistence: persistence) }
@@ -47,6 +54,16 @@ struct SessionDetailView: View {
         }
         .onDisappear {
             viewModel.stopPolling()
+        }
+        .confirmationDialog(
+            "Terminate Session?",
+            isPresented: $viewModel.showTerminateConfirmation
+        ) {
+            Button("Terminate", role: .destructive) {
+                Task { await viewModel.terminateSession() }
+            }
+        } message: {
+            Text("This will permanently stop Devin from working on this session. This cannot be undone.")
         }
     }
 

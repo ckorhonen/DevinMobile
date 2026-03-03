@@ -52,6 +52,16 @@ final class PersistenceManager {
         try? context.save()
     }
 
+    func cachedArchivedSessions() -> [Session] {
+        var descriptor = FetchDescriptor<CachedSession>(
+            predicate: #Predicate { $0.isArchived && !$0.isHidden },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 200
+        let cached = (try? context.fetch(descriptor)) ?? []
+        return cached.map { $0.toAPIModel() }
+    }
+
     func setSessionArchived(_ sessionId: String, archived: Bool) {
         let descriptor = FetchDescriptor<CachedSession>(
             predicate: #Predicate<CachedSession> { $0.sessionId == sessionId }
