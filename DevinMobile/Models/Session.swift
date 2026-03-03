@@ -44,6 +44,18 @@ struct Session: Codable, Identifiable, Hashable, Sendable {
         let s = resolvedStatus
         return s == .running || s == .working || s == .blocked || s == .resumed || s == .resumeRequested || s == .resumeRequestedFrontend
     }
+
+    /// Compares mutable fields to detect content changes.
+    /// Unlike `==` which only compares `sessionId` for identity,
+    /// this checks fields that can change over a session's lifetime.
+    func hasContentChanges(from other: Session) -> Bool {
+        self.status != other.status
+            || self.statusEnum != other.statusEnum
+            || self.title != other.title
+            || self.updatedAt != other.updatedAt
+            || self.acusConsumed != other.acusConsumed
+            || self.tags != other.tags
+    }
 }
 
 struct PullRequest: Codable, Sendable {
