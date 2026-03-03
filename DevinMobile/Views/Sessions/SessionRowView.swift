@@ -20,6 +20,10 @@ struct SessionRowView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                if let pr = session.pullRequest, pr.number != nil {
+                    PRBadge(pullRequest: pr)
+                }
             }
 
             Spacer()
