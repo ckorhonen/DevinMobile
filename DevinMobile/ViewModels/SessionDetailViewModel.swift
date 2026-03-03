@@ -13,6 +13,7 @@ final class SessionDetailViewModel {
     var toastMessage: String?
 
     private var pollingTask: Task<Void, Never>?
+    private var persistence: PersistenceManager?
 
     /// Groups consecutive messages by the same source into "turns"
     var messageTurns: [[DevinMessage]] {
@@ -40,8 +41,23 @@ final class SessionDetailViewModel {
         self.sessionId = sessionId
     }
 
+    func configure(persistence: PersistenceManager) {
+        self.persistence = persistence
+    }
+
     func loadSessionAndMessages() async {
-        loadingState = .loading
+        // Show cached messages immediately if available
+        if let persistence, messages.isEmpty {
+            let cached = persistence.cachedMessages(for: sessionId)
+            if !cached.isEmpty {
+                messages = cached
+                loadingState = .loaded(messages)
+            }
+        }
+
+        if messages.isEmpty {
+            loadingState = .loading
+        }
 
         do {
             // v1: GET /sessions/{id} returns session + messages inline
@@ -64,10 +80,20 @@ final class SessionDetailViewModel {
             )
             messages = detail.messages ?? []
             loadingState = .loaded(messages)
+
+            persistence?.upsertMessages(messages, sessionId: sessionId)
         } catch let error as DevinAPIError {
-            loadingState = .error(ErrorInfo(error))
+            if messages.isEmpty {
+                loadingState = .error(ErrorInfo(error))
+            } else {
+                toastMessage = error.localizedDescription
+            }
         } catch {
-            loadingState = .error(ErrorInfo(message: error.localizedDescription))
+            if messages.isEmpty {
+                loadingState = .error(ErrorInfo(message: error.localizedDescription))
+            } else {
+                toastMessage = error.localizedDescription
+            }
         }
     }
 

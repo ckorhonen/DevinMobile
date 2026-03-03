@@ -3,6 +3,7 @@ import SwiftUI
 struct SessionDetailView: View {
     @State private var viewModel: SessionDetailViewModel
     @FocusState private var isComposerFocused: Bool
+    @Environment(\.persistenceManager) private var persistence
 
     init(sessionId: String, initialSession: Session? = nil) {
         _viewModel = State(initialValue: SessionDetailViewModel(sessionId: sessionId))
@@ -38,6 +39,7 @@ struct SessionDetailView: View {
             }
         }
         .task {
+            if let persistence { viewModel.configure(persistence: persistence) }
             await viewModel.loadSessionAndMessages()
         }
         .onAppear {

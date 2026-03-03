@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PlaybookListView: View {
     @State private var viewModel = PlaybookListViewModel()
+    @Environment(\.persistenceManager) private var persistence
 
     var body: some View {
         NavigationStack {
@@ -38,6 +39,7 @@ struct PlaybookListView: View {
                 await viewModel.loadPlaybooks()
             }
             .task {
+                if let persistence { viewModel.configure(persistence: persistence) }
                 if viewModel.loadingState.value == nil {
                     await viewModel.loadPlaybooks()
                 }

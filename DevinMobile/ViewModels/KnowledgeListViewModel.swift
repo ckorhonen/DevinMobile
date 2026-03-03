@@ -7,23 +7,50 @@ final class KnowledgeListViewModel {
     var loadingState: LoadingState<[KnowledgeNote]> = .idle
     var toastMessage: String?
 
+    private var persistence: PersistenceManager?
+
+    func configure(persistence: PersistenceManager) {
+        self.persistence = persistence
+    }
+
     func loadNotes() async {
-        loadingState = .loading
+        // Show cached data immediately if available
+        if let persistence {
+            let cached = persistence.cachedNotes()
+            if !cached.isEmpty {
+                notes = cached
+                loadingState = .loaded(notes)
+            }
+        }
+
+        if notes.isEmpty {
+            loadingState = .loading
+        }
 
         do {
             let response: KnowledgeListResponse = try await APIClient.shared.perform(.listKnowledge)
-            notes = response.knowledge
+            persistence?.upsertNotes(response.knowledge)
+            notes = persistence?.cachedNotes() ?? response.knowledge
             loadingState = .loaded(notes)
         } catch let error as DevinAPIError {
-            loadingState = .error(ErrorInfo(error))
+            if notes.isEmpty {
+                loadingState = .error(ErrorInfo(error))
+            } else {
+                toastMessage = error.localizedDescription
+            }
         } catch {
-            loadingState = .error(ErrorInfo(message: error.localizedDescription))
+            if notes.isEmpty {
+                loadingState = .error(ErrorInfo(message: error.localizedDescription))
+            } else {
+                toastMessage = error.localizedDescription
+            }
         }
     }
 
     func deleteNote(id: String) async {
         do {
             try await APIClient.shared.performVoid(.deleteNote(id: id))
+            persistence?.deleteNote(id)
             notes.removeAll { $0.id == id }
             loadingState = .loaded(notes)
         } catch let error as DevinAPIError {
