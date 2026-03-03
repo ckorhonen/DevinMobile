@@ -32,7 +32,7 @@ final class SessionListViewModel {
     var isCreatingSession = false
     var showNewSessionSheet = false
     var showArchived = false
-    var toastMessage: String?
+    var toast: ToastItem?
     var isRefreshing = false
 
     private var offset = 0
@@ -95,13 +95,13 @@ final class SessionListViewModel {
             if sessions.isEmpty {
                 loadingState = .error(ErrorInfo(error))
             } else {
-                toastMessage = error.localizedDescription
+                toast = .error(error.localizedDescription)
             }
         } catch {
             if sessions.isEmpty {
                 loadingState = .error(ErrorInfo(message: error.localizedDescription))
             } else {
-                toastMessage = error.localizedDescription
+                toast = .error(error.localizedDescription)
             }
         }
         isRefreshing = false
@@ -122,9 +122,9 @@ final class SessionListViewModel {
             hasMore = response.sessions.count >= 50
             loadingState = .loaded(sessions)
         } catch let error as DevinAPIError {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
         } catch {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
         }
         isRefreshing = false
     }
@@ -168,9 +168,9 @@ final class SessionListViewModel {
             showNewSessionSheet = false
             await loadSessions()
         } catch let error as DevinAPIError {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
         } catch {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
         }
     }
 

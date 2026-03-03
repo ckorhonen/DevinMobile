@@ -65,6 +65,7 @@ struct SessionDetailView: View {
         } message: {
             Text("This will permanently stop Devin from working on this session. This cannot be undone.")
         }
+        .toastOverlay(toast: $viewModel.toast)
     }
 
     @ViewBuilder

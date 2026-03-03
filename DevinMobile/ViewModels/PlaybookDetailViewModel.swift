@@ -5,7 +5,7 @@ import Foundation
 final class PlaybookDetailViewModel {
     var playbook: Playbook?
     var loadingState: LoadingState<Playbook> = .idle
-    var toastMessage: String?
+    var toast: ToastItem?
 
     let playbookId: String
 
@@ -37,10 +37,10 @@ final class PlaybookDetailViewModel {
             try await APIClient.shared.performVoid(.deletePlaybook(id: playbookId))
             return true
         } catch let error as DevinAPIError {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
             return false
         } catch {
-            toastMessage = error.localizedDescription
+            toast = .error(error.localizedDescription)
             return false
         }
     }
