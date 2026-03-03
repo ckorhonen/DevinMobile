@@ -71,5 +71,6 @@ struct PlaybookDetailView: View {
                 await viewModel.loadPlaybook()
             }
         }
+        .toast(message: $viewModel.toastMessage)
     }
 }

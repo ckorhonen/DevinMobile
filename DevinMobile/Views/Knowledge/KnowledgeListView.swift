@@ -61,6 +61,7 @@ struct KnowledgeListView: View {
                     await viewModel.loadNotes()
                 }
             }
+            .toast(message: $viewModel.toastMessage)
         }
     }
 

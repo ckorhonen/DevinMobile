@@ -48,6 +48,7 @@ struct SessionDetailView: View {
         .onDisappear {
             viewModel.stopPolling()
         }
+        .toast(message: $viewModel.toastMessage)
     }
 
     @ViewBuilder

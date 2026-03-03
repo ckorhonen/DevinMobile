@@ -44,6 +44,7 @@ struct PlaybookListView: View {
                     await viewModel.loadPlaybooks()
                 }
             }
+            .toast(message: $viewModel.toastMessage)
         }
     }
 

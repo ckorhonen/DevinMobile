@@ -58,6 +58,7 @@ struct SessionListView: View {
                     await viewModel.loadSessions()
                 }
             }
+            .toast(message: $viewModel.toastMessage)
         }
     }
 
