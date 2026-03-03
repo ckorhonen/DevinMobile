@@ -20,7 +20,7 @@ struct Session: Codable, Identifiable, Hashable, Sendable {
 
     let sessionId: String
     let status: String?
-    let statusEnum: String?
+    var statusEnum: String?
     let title: String?
     let createdAt: String?
     let updatedAt: String?
@@ -82,6 +82,3 @@ struct CreateSessionResponse: Decodable, Sendable {
     let isNewSession: Bool?
 }
 
-struct ArchiveSessionRequest: Encodable, Sendable {
-    let sessionIds: [String]
-}

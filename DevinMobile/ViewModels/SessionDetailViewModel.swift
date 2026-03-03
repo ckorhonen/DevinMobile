@@ -11,6 +11,8 @@ final class SessionDetailViewModel {
     var messageText = ""
     var isSending = false
     var toastMessage: String?
+    var showTerminateConfirmation = false
+    var isTerminating = false
 
     private var pollingTask: Task<Void, Never>?
     private var persistence: PersistenceManager?
@@ -131,6 +133,28 @@ final class SessionDetailViewModel {
                 guard let self, self.isSessionActive else { break }
                 await self.loadSessionAndMessages()
             }
+        }
+    }
+
+    func terminateSession() async {
+        isTerminating = true
+        defer { isTerminating = false }
+
+        do {
+            try await APIClient.shared.performVoid(.deleteSession(id: sessionId))
+            session = session.map {
+                var updated = $0
+                updated.statusEnum = SessionStatus.stopped.rawValue
+                return updated
+            }
+            if let persistence, let updated = session {
+                persistence.upsertSessions([updated])
+            }
+            stopPolling()
+        } catch let error as DevinAPIError {
+            toastMessage = error.localizedDescription
+        } catch {
+            toastMessage = error.localizedDescription
         }
     }
 
