@@ -44,7 +44,6 @@ struct ToastModifier: ViewModifier {
                     }
                 }
             }
-            .animation(.spring(duration: 0.35, bounce: 0.2), value: isVisible)
     }
 
     private func dismiss() {
@@ -52,8 +51,9 @@ struct ToastModifier: ViewModifier {
         withAnimation(.easeOut(duration: 0.25)) {
             isVisible = false
         }
-        Task { @MainActor in
+        dismissTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
             toast = nil
         }
     }
