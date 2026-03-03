@@ -2,9 +2,11 @@ import SwiftUI
 
 struct MarkdownContentView: View {
     let markdown: String
+    private let blocks: [MarkdownBlock]
 
-    private var blocks: [MarkdownBlock] {
-        MarkdownParser.parse(markdown)
+    init(markdown: String) {
+        self.markdown = markdown
+        self.blocks = MarkdownParser.parse(markdown)
     }
 
     var body: some View {

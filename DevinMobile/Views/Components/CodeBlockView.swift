@@ -5,6 +5,7 @@ struct CodeBlockView: View {
     let code: String
 
     @State private var showCopied = false
+    @State private var copyTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -19,9 +20,12 @@ struct CodeBlockView: View {
                 Button {
                     UIPasteboard.general.string = code
                     showCopied = true
-                    Task {
+                    copyTask?.cancel()
+                    copyTask = Task {
                         try? await Task.sleep(for: .seconds(2))
-                        showCopied = false
+                        if !Task.isCancelled {
+                            showCopied = false
+                        }
                     }
                 } label: {
                     Label(showCopied ? "Copied" : "Copy",
