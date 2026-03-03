@@ -16,6 +16,12 @@ struct ErrorInfo: Sendable {
         self.systemImage = "exclamationmark.triangle"
         self.actionLabel = "Retry"
     }
+
+    init(message: String, systemImage: String, actionLabel: String) {
+        self.message = message
+        self.systemImage = systemImage
+        self.actionLabel = actionLabel
+    }
 }
 
 enum LoadingState<T: Sendable>: Sendable {

@@ -26,8 +26,12 @@ struct SessionRowView: View {
 
             if let acus = session.acusConsumed, acus > 0 {
                 Text(String(format: "%.1f ACU", acus))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.fill.tertiary, in: Capsule())
             }
         }
         .padding(.vertical, 4)
