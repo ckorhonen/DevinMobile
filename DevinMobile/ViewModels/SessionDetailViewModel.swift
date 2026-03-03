@@ -142,7 +142,12 @@ final class SessionDetailViewModel {
 
         do {
             try await APIClient.shared.performVoid(.deleteSession(id: sessionId))
-            await loadSessionAndMessages()
+            session = session.map {
+                var updated = $0
+                updated.statusEnum = SessionStatus.stopped.rawValue
+                return updated
+            }
+            stopPolling()
         } catch let error as DevinAPIError {
             toastMessage = error.localizedDescription
         } catch {

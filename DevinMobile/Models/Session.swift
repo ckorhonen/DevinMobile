@@ -20,7 +20,7 @@ struct Session: Codable, Identifiable, Hashable, Sendable {
 
     let sessionId: String
     let status: String?
-    let statusEnum: String?
+    var statusEnum: String?
     let title: String?
     let createdAt: String?
     let updatedAt: String?

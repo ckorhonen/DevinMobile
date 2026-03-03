@@ -56,7 +56,9 @@ struct SessionListView: View {
                 }
             }
             .refreshable {
-                await viewModel.refreshSessions()
+                if !viewModel.showArchived {
+                    await viewModel.refreshSessions()
+                }
             }
             .sheet(isPresented: $viewModel.showNewSessionSheet) {
                 NewSessionSheet { prompt, playbookId in
@@ -121,7 +123,9 @@ struct SessionListView: View {
                     }
                 }
                 .task {
-                    await viewModel.loadMoreIfNeeded(currentItem: session)
+                    if !viewModel.showArchived {
+                        await viewModel.loadMoreIfNeeded(currentItem: session)
+                    }
                 }
             }
         }
