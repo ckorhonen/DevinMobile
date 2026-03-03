@@ -147,6 +147,9 @@ final class SessionDetailViewModel {
                 updated.statusEnum = SessionStatus.stopped.rawValue
                 return updated
             }
+            if let persistence, let updated = session {
+                persistence.upsertSessions([updated])
+            }
             stopPolling()
         } catch let error as DevinAPIError {
             toastMessage = error.localizedDescription
