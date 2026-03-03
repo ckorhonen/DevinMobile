@@ -148,6 +148,23 @@ struct SessionListView: View {
                 }
                 .buttonStyle(.bordered)
             }
+        } else if viewModel.filter == .active {
+            ContentUnavailableView {
+                Label("No Active Sessions", systemImage: "bubbles.and.sparkles")
+            } description: {
+                Text("Start a new session or check finished sessions.")
+            } actions: {
+                Button("New Session") {
+                    viewModel.showNewSessionSheet = true
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        } else if viewModel.filter == .finished {
+            ContentUnavailableView {
+                Label("No Finished Sessions", systemImage: "checkmark.circle")
+            } description: {
+                Text("Completed sessions will appear here.")
+            }
         } else {
             ContentUnavailableView {
                 Label("No Sessions", systemImage: "bubbles.and.sparkles")
