@@ -30,6 +30,7 @@ struct ToastView: View {
 struct ToastModifier: ViewModifier {
     @Binding var message: String?
     var duration: Duration = .seconds(3)
+    @State private var dismissTask: Task<Void, Never>?
 
     func body(content: Content) -> some View {
         content
@@ -43,13 +44,13 @@ struct ToastModifier: ViewModifier {
             }
             .animation(.spring(duration: 0.35, bounce: 0.2), value: message)
             .onChange(of: message) { _, newValue in
-                if newValue != nil {
-                    Task { @MainActor in
-                        try? await Task.sleep(for: duration)
-                        if self.message == newValue {
-                            self.message = nil
-                        }
-                    }
+                dismissTask?.cancel()
+                guard newValue != nil else { return }
+
+                dismissTask = Task { @MainActor in
+                    try? await Task.sleep(for: duration)
+                    guard !Task.isCancelled else { return }
+                    self.message = nil
                 }
             }
     }
