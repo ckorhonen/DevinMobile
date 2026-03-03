@@ -24,6 +24,8 @@ struct ToastView: View {
         )
         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
         .padding(.horizontal, 16)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isStaticText)
     }
 }
 
@@ -47,6 +49,7 @@ struct ToastModifier: ViewModifier {
                 dismissTask?.cancel()
                 guard newValue != nil else { return }
 
+                AccessibilityNotification.Announcement(newValue).post()
                 dismissTask = Task { @MainActor in
                     try? await Task.sleep(for: duration)
                     guard !Task.isCancelled else { return }
