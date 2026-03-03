@@ -6,7 +6,6 @@ struct SettingsView: View {
     @Environment(\.persistenceManager) private var persistence
 
     var body: some View {
-        NavigationStack {
             List {
                 Section("API Key") {
                     if viewModel.hasValidKey {
@@ -38,6 +37,20 @@ struct SettingsView: View {
                         } label: {
                             Label("Set Up API Key", systemImage: "key")
                         }
+                    }
+                }
+
+                Section("Features") {
+                    NavigationLink {
+                        KnowledgeListView()
+                    } label: {
+                        Label("Knowledge", systemImage: "book.pages")
+                    }
+
+                    NavigationLink {
+                        PlaybookListView()
+                    } label: {
+                        Label("Playbooks", systemImage: "play.rectangle.on.rectangle")
                     }
                 }
 
@@ -82,6 +95,5 @@ struct SettingsView: View {
             .onAppear {
                 viewModel.checkExistingKey()
             }
-        }
     }
 }

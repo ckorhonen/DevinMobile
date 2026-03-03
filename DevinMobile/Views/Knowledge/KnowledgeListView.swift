@@ -7,62 +7,60 @@ struct KnowledgeListView: View {
     @Environment(\.persistenceManager) private var persistence
 
     var body: some View {
-        NavigationStack {
-            Group {
-                switch viewModel.loadingState {
-                case .idle, .loading:
-                    if viewModel.notes.isEmpty {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        noteList
+        Group {
+            switch viewModel.loadingState {
+            case .idle, .loading:
+                if viewModel.notes.isEmpty {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    noteList
+                }
+            case .loaded:
+                if viewModel.notes.isEmpty {
+                    emptyState
+                } else {
+                    noteList
+                }
+            case .error(let info):
+                ContentUnavailableView {
+                    Label("Unable to Load", systemImage: info.systemImage)
+                } description: {
+                    Text(info.message)
+                } actions: {
+                    Button(info.actionLabel) {
+                        Task { await viewModel.loadNotes() }
                     }
-                case .loaded:
-                    if viewModel.notes.isEmpty {
-                        emptyState
-                    } else {
-                        noteList
-                    }
-                case .error(let info):
-                    ContentUnavailableView {
-                        Label("Unable to Load", systemImage: info.systemImage)
-                    } description: {
-                        Text(info.message)
-                    } actions: {
-                        Button(info.actionLabel) {
-                            Task { await viewModel.loadNotes() }
-                        }
-                        .buttonStyle(.bordered)
-                    }
+                    .buttonStyle(.bordered)
                 }
             }
-            .navigationTitle("Knowledge")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        editingNote = nil
-                        showEditor = true
-                    } label: {
-                        Label("New Note", systemImage: "plus")
-                    }
+        }
+        .navigationTitle("Knowledge")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    editingNote = nil
+                    showEditor = true
+                } label: {
+                    Label("New Note", systemImage: "plus")
                 }
             }
-            .refreshable {
+        }
+        .refreshable {
+            await viewModel.loadNotes()
+        }
+        .sheet(isPresented: $showEditor) {
+            Task { await viewModel.loadNotes() }
+        } content: {
+            NoteEditorView(note: editingNote)
+        }
+        .task {
+            if let persistence { viewModel.configure(persistence: persistence) }
+            if viewModel.loadingState.value == nil {
                 await viewModel.loadNotes()
             }
-            .sheet(isPresented: $showEditor) {
-                Task { await viewModel.loadNotes() }
-            } content: {
-                NoteEditorView(note: editingNote)
-            }
-            .task {
-                if let persistence { viewModel.configure(persistence: persistence) }
-                if viewModel.loadingState.value == nil {
-                    await viewModel.loadNotes()
-                }
-            }
-            .toastOverlay(toast: $viewModel.toast)
         }
+        .toastOverlay(toast: $viewModel.toast)
     }
 
     private var noteList: some View {

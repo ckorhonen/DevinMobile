@@ -1,25 +1,35 @@
 import SwiftUI
 
+enum AppTab: Hashable {
+    case sessions
+    case settings
+    case search
+}
+
 struct RootView: View {
-    @State private var selectedTab = 0
+    @State private var selectedTab: AppTab = .sessions
+    @State private var searchText = ""
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("Sessions", systemImage: "bubbles.and.sparkles", value: 0) {
+            Tab("Sessions", systemImage: "bubbles.and.sparkles", value: .sessions) {
                 SessionListView()
             }
 
-            Tab("Knowledge", systemImage: "book.pages", value: 1) {
-                KnowledgeListView()
+            Tab("Settings", systemImage: "gearshape", value: .settings) {
+                NavigationStack {
+                    SettingsView()
+                }
             }
 
-            Tab("Playbooks", systemImage: "play.rectangle.on.rectangle", value: 2) {
-                PlaybookListView()
-            }
-
-            Tab("Settings", systemImage: "gearshape", value: 3) {
-                SettingsView()
+            Tab(value: .search, role: .search) {
+                NavigationStack {
+                    SessionSearchView(searchText: $searchText)
+                        .navigationTitle("Search")
+                }
+                .searchable(text: $searchText, prompt: "Sessions, status, tags…")
             }
         }
+        .tabBarMinimizeBehavior(.onScrollDown)
     }
 }

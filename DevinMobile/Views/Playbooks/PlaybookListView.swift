@@ -5,47 +5,45 @@ struct PlaybookListView: View {
     @Environment(\.persistenceManager) private var persistence
 
     var body: some View {
-        NavigationStack {
-            Group {
-                switch viewModel.loadingState {
-                case .idle, .loading:
-                    if viewModel.playbooks.isEmpty {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        playbookList
+        Group {
+            switch viewModel.loadingState {
+            case .idle, .loading:
+                if viewModel.playbooks.isEmpty {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    playbookList
+                }
+            case .loaded:
+                if viewModel.playbooks.isEmpty {
+                    emptyState
+                } else {
+                    playbookList
+                }
+            case .error(let info):
+                ContentUnavailableView {
+                    Label("Unable to Load", systemImage: info.systemImage)
+                } description: {
+                    Text(info.message)
+                } actions: {
+                    Button(info.actionLabel) {
+                        Task { await viewModel.loadPlaybooks() }
                     }
-                case .loaded:
-                    if viewModel.playbooks.isEmpty {
-                        emptyState
-                    } else {
-                        playbookList
-                    }
-                case .error(let info):
-                    ContentUnavailableView {
-                        Label("Unable to Load", systemImage: info.systemImage)
-                    } description: {
-                        Text(info.message)
-                    } actions: {
-                        Button(info.actionLabel) {
-                            Task { await viewModel.loadPlaybooks() }
-                        }
-                        .buttonStyle(.bordered)
-                    }
+                    .buttonStyle(.bordered)
                 }
             }
-            .navigationTitle("Playbooks")
-            .refreshable {
+        }
+        .navigationTitle("Playbooks")
+        .refreshable {
+            await viewModel.loadPlaybooks()
+        }
+        .task {
+            if let persistence { viewModel.configure(persistence: persistence) }
+            if viewModel.loadingState.value == nil {
                 await viewModel.loadPlaybooks()
             }
-            .task {
-                if let persistence { viewModel.configure(persistence: persistence) }
-                if viewModel.loadingState.value == nil {
-                    await viewModel.loadPlaybooks()
-                }
-            }
-            .toastOverlay(toast: $viewModel.toast)
         }
+        .toastOverlay(toast: $viewModel.toast)
     }
 
     private var playbookList: some View {
