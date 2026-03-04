@@ -36,6 +36,13 @@ Monitor sessions, message Devin, manage knowledge and playbooks, review PRs, and
 - Filter sessions by repository
 - Deep link to GitHub app or Safari
 
+**On-Device AI** (Apple Foundation Models)
+- Auto-generated session category tags (bug, feature, refactor, performance, docs, infra, question)
+- AI-powered 1–2 sentence session summaries shown in session detail
+- One-tap knowledge note drafting from completed sessions — extracts reusable patterns and instructions
+- All processing on-device, offline-capable, no API costs
+- Gracefully hidden on devices without Apple Intelligence
+
 **Knowledge & Playbooks**
 - Create, edit, and delete knowledge notes with triggers
 - Browse and run playbooks to start pre-configured sessions
@@ -51,6 +58,7 @@ Monitor sessions, message Devin, manage knowledge and playbooks, review PRs, and
 - Devin API v1 + v3 beta with automatic version negotiation
 - iOS 26 liquid glass tab bar
 - Generative per-session header backgrounds seeded from session ID
+- On-device AI via Apple Foundation Models (`@Generable` structured output, cached in SwiftData)
 
 ## Requirements
 
@@ -98,7 +106,7 @@ DevinMobile/
 │   ├── Settings/           # Settings, secrets, consumption, API key setup
 │   └── Components/         # Shared UI (StatusBadge, FilterChips, Toast, etc.)
 ├── Networking/             # APIClient actor, APIEndpoint enum, RequestBuilder
-├── Services/               # KeychainService
+├── Services/               # KeychainService, FoundationModelService (on-device AI)
 ├── Persistence/            # SwiftData models and ModelContainer setup
 └── Extensions/             # Color+Devin, Date+Formatting, String helpers
 ```
@@ -112,6 +120,7 @@ The app follows **MVVM** with Swift's Observation framework:
 - **Views** are pure SwiftUI, organized by feature
 - **APIClient** is a Swift `actor` singleton — all networking goes through `perform<T>()` or `performVoid()`
 - **KeychainService** wraps the Security framework for credential storage
+- **FoundationModelService** is a Swift `actor` wrapping Apple's on-device LLM for session categorization, summarization, and knowledge extraction. Results are cached in SwiftData and persist across API refreshes.
 
 ## TestFlight Upload
 

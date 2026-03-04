@@ -8,6 +8,14 @@ struct NoteEditorView: View {
         _viewModel = State(initialValue: NoteEditorViewModel(note: note))
     }
 
+    init(prefilledName: String, prefilledBody: String, prefilledTrigger: String) {
+        _viewModel = State(initialValue: NoteEditorViewModel(
+            prefilledName: prefilledName,
+            prefilledBody: prefilledBody,
+            prefilledTrigger: prefilledTrigger
+        ))
+    }
+
     var body: some View {
         NavigationStack {
             Form {

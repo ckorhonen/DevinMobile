@@ -28,6 +28,13 @@ final class NoteEditorViewModel {
         }
     }
 
+    init(prefilledName: String, prefilledBody: String, prefilledTrigger: String) {
+        self.existingNote = nil
+        self.name = prefilledName
+        self.body = prefilledBody
+        self.trigger = prefilledTrigger
+    }
+
     func save() async -> Bool {
         isSaving = true
         defer { isSaving = false }

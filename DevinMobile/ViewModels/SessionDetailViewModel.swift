@@ -16,6 +16,14 @@ final class SessionDetailViewModel {
     var showTerminateConfirmation = false
     var isTerminating = false
 
+    // AI-generated insights
+    var category: SessionCategory?
+    var summary: String?
+    var isGeneratingAI = false
+    var knowledgeNoteDraft: KnowledgeNoteDraft?
+    var showKnowledgeNoteEditor = false
+    var isGeneratingKnowledgeNote = false
+
     private var pollingTask: Task<Void, Never>?
     private var persistence: PersistenceManager?
 
@@ -221,6 +229,80 @@ final class SessionDetailViewModel {
             toast = .error(error.localizedDescription)
         } catch {
             toast = .error(error.localizedDescription)
+        }
+    }
+
+    // MARK: - AI Insights
+
+    func generateAIInsights() async {
+        // Category is stable (intent doesn't change), so always use cache if available.
+        // Summary reflects outcomes, so only use cache for completed sessions.
+        if let persistence {
+            let cached = persistence.cachedSessionAI(for: sessionId)
+            if let cachedCategory = cached.category {
+                category = cachedCategory
+            }
+            if !isSessionActive, let cachedSummary = cached.summary {
+                summary = cachedSummary
+            }
+        }
+
+        // For completed sessions, skip generation if both are already cached.
+        if !isSessionActive && category != nil && summary != nil { return }
+
+        guard await FoundationModelService.shared.isAvailable else { return }
+        guard !messages.isEmpty else { return }
+
+        isGeneratingAI = true
+        defer { isGeneratingAI = false }
+
+        let title = session?.title
+        let msgs = messages
+        let needsCategory = category == nil
+        let needsSummary = summary == nil
+
+        // Generate category and summary concurrently
+        async let categoryResult: SessionCategory? = needsCategory
+            ? (try? await FoundationModelService.shared.categorize(title: title, messages: msgs))
+            : nil
+
+        async let summaryResult: SessionSummary? = needsSummary
+            ? (try? await FoundationModelService.shared.summarize(title: title, messages: msgs))
+            : nil
+
+        let (newCategory, newSummary) = await (categoryResult, summaryResult)
+
+        if let newCategory {
+            category = newCategory
+        }
+        if let newSummary {
+            summary = newSummary.text
+        }
+
+        // Always persist category; only persist summary for completed sessions
+        persistence?.updateSessionAI(
+            sessionId: sessionId,
+            category: (newCategory ?? category)?.rawValue,
+            summary: isSessionActive ? nil : (newSummary?.text ?? summary)
+        )
+    }
+
+    func generateKnowledgeNoteDraft() async {
+        guard await FoundationModelService.shared.isAvailable else { return }
+        guard !messages.isEmpty else { return }
+
+        isGeneratingKnowledgeNote = true
+        defer { isGeneratingKnowledgeNote = false }
+
+        do {
+            let draft = try await FoundationModelService.shared.draftKnowledgeNote(
+                title: session?.title,
+                messages: messages
+            )
+            knowledgeNoteDraft = draft
+            showKnowledgeNoteEditor = true
+        } catch {
+            toast = .error("Failed to generate knowledge note")
         }
     }
 

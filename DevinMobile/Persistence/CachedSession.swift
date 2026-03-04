@@ -27,6 +27,10 @@ final class CachedSession {
     var lastFetched: Date = Date()
     var lastViewedAt: Date?
 
+    // AI-generated fields (local-only, not overwritten by API)
+    var generatedCategory: String?
+    var generatedSummary: String?
+
     @Relationship(deleteRule: .cascade, inverse: \CachedMessage.session)
     var messages: [CachedMessage] = []
 

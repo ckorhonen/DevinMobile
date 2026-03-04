@@ -126,7 +126,7 @@ struct SessionListView: View {
         List {
             ForEach(viewModel.filteredSessions) { session in
                 NavigationLink(value: session) {
-                    SessionRowView(session: session)
+                    SessionRowView(session: session, category: persistence?.cachedSessionAI(for: session.sessionId).category)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     if viewModel.showArchived {

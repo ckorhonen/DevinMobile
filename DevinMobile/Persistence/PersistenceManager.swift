@@ -91,6 +91,30 @@ final class PersistenceManager {
         }
     }
 
+    // MARK: - Session AI
+
+    func updateSessionAI(sessionId: String, category: String?, summary: String?) {
+        let descriptor = FetchDescriptor<CachedSession>(
+            predicate: #Predicate<CachedSession> { $0.sessionId == sessionId }
+        )
+        if let session = try? context.fetch(descriptor).first {
+            if let category { session.generatedCategory = category }
+            if let summary { session.generatedSummary = summary }
+            try? context.save()
+        }
+    }
+
+    func cachedSessionAI(for sessionId: String) -> (category: SessionCategory?, summary: String?) {
+        let descriptor = FetchDescriptor<CachedSession>(
+            predicate: #Predicate<CachedSession> { $0.sessionId == sessionId }
+        )
+        guard let session = try? context.fetch(descriptor).first else {
+            return (nil, nil)
+        }
+        let category = session.generatedCategory.flatMap { SessionCategory(rawValue: $0) }
+        return (category, session.generatedSummary)
+    }
+
     // MARK: - Messages
 
     func cachedMessages(for sessionId: String) -> [DevinMessage] {
