@@ -75,16 +75,19 @@ final class SessionChangeDetector {
 
     private func fetchSessions() async throws -> [Session] {
         if APIConfiguration.v3BaseURL != nil {
-            let response: PaginatedResponse<V3SessionItem> = try await APIClient.shared.perform(
-                .listSessionsV3(first: 50, after: nil)
-            )
-            return response.items.map { $0.toSession() }
-        } else {
-            let response: SessionListResponse = try await APIClient.shared.perform(
-                .listSessions(limit: 50, offset: 0, userEmail: KeychainService.getUserEmail())
-            )
-            return response.sessions
+            do {
+                let response: PaginatedResponse<V3SessionItem> = try await APIClient.shared.perform(
+                    .listSessionsV3(first: 50, after: nil)
+                )
+                return response.items.map { $0.toSession() }
+            } catch {
+                // Fall back to v1 on transient v3 errors
+            }
         }
+        let response: SessionListResponse = try await APIClient.shared.perform(
+            .listSessions(limit: 50, offset: 0, userEmail: KeychainService.getUserEmail())
+        )
+        return response.sessions
     }
 
     private func upsertToCache(_ sessions: [Session]) {
