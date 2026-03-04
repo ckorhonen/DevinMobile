@@ -52,13 +52,18 @@ final class BackgroundRefreshManager {
         nextRequest.earliestBeginDate = Date(timeIntervalSinceNow: nextInterval)
         try? BGTaskScheduler.shared.submit(nextRequest)
 
-        // Set up expiration handler
+        // Guard against setTaskCompleted being called twice if expiration fires mid-flight
+        var completed = false
         task.expirationHandler = {
+            guard !completed else { return }
+            completed = true
             task.setTaskCompleted(success: false)
         }
 
         // Detect changes and notify
         guard let container = modelContainer else {
+            guard !completed else { return }
+            completed = true
             task.setTaskCompleted(success: false)
             return
         }
@@ -75,6 +80,8 @@ final class BackgroundRefreshManager {
             )
         }
 
+        guard !completed else { return }
+        completed = true
         task.setTaskCompleted(success: true)
     }
 

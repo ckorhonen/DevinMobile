@@ -21,34 +21,8 @@ actor APIClient {
         guard let token = APIConfiguration.token else {
             throw .noAuthToken
         }
-
         let request = try RequestBuilder.build(endpoint: endpoint, body: body, token: token)
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            throw .networkError(error)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw .networkError(URLError(.badServerResponse))
-        }
-
-        switch httpResponse.statusCode {
-        case 200...299:
-            break
-        case 401, 403:
-            throw .unauthorized
-        case 429:
-            throw .rateLimited
-        case 404:
-            throw .notFound
-        default:
-            throw .serverError(statusCode: httpResponse.statusCode)
-        }
-
+        let data = try await execute(request)
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
@@ -60,32 +34,8 @@ actor APIClient {
         guard let token = APIConfiguration.token else {
             throw .noAuthToken
         }
-
         let request = try RequestBuilder.build(endpoint: endpoint, body: body, token: token)
-
-        let response: URLResponse
-        do {
-            (_, response) = try await session.data(for: request)
-        } catch {
-            throw .networkError(error)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw .networkError(URLError(.badServerResponse))
-        }
-
-        switch httpResponse.statusCode {
-        case 200...299:
-            break
-        case 401, 403:
-            throw .unauthorized
-        case 429:
-            throw .rateLimited
-        case 404:
-            throw .notFound
-        default:
-            throw .serverError(statusCode: httpResponse.statusCode)
-        }
+        _ = try await execute(request)
     }
 
     func uploadFile(
@@ -97,7 +47,6 @@ actor APIClient {
         guard let token = APIConfiguration.token else {
             throw .noAuthToken
         }
-
         let request = try RequestBuilder.buildMultipart(
             endpoint: endpoint,
             fileData: fileData,
@@ -105,31 +54,7 @@ actor APIClient {
             mimeType: mimeType,
             token: token
         )
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            throw .networkError(error)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw .networkError(URLError(.badServerResponse))
-        }
-
-        switch httpResponse.statusCode {
-        case 200...299:
-            break
-        case 401, 403:
-            throw .unauthorized
-        case 429:
-            throw .rateLimited
-        case 404:
-            throw .notFound
-        default:
-            throw .serverError(statusCode: httpResponse.statusCode)
-        }
+        let data = try await execute(request)
 
         // API returns a URL string
         guard let urlString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) else {
@@ -142,5 +67,34 @@ actor APIClient {
         }
 
         return urlString
+    }
+
+    private func execute(_ request: URLRequest) async throws(DevinAPIError) -> Data {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw .networkError(error)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw .networkError(URLError(.badServerResponse))
+        }
+
+        switch httpResponse.statusCode {
+        case 200...299:
+            break
+        case 401, 403:
+            throw .unauthorized
+        case 429:
+            throw .rateLimited
+        case 404:
+            throw .notFound
+        default:
+            throw .serverError(statusCode: httpResponse.statusCode)
+        }
+
+        return data
     }
 }
