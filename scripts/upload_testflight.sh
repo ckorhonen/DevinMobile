@@ -1,9 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 
+# Source credentials from .env
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/../.env"
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "Error: .env file not found. Copy .env.example to .env and fill in your credentials."
+  exit 1
+fi
+
+source "$ENV_FILE"
+
 IPA_PATH="${1:-/tmp/DevinMobileExport/DevinMobile.ipa}"
-API_KEY_ID="W7NR255577"
-API_ISSUER_ID="69a6de97-aa61-47e3-e053-5b8c7c11a4d1"
+API_KEY_ID="${APP_STORE_KEY_ID}"
+API_ISSUER_ID="${APP_STORE_ISSUER_ID}"
 
 echo "Uploading $IPA_PATH to App Store Connect..."
 

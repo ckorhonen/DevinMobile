@@ -15,6 +15,7 @@ struct AuthGate: View {
                 NavigationStack {
                     APIKeySetupView {
                         hasKey = true
+                        NotificationManager.shared.requestPermissionIfNeeded()
                     }
                 }
             }
@@ -22,6 +23,9 @@ struct AuthGate: View {
         .onAppear {
             hasKey = KeychainService.hasAPIKey
             isChecking = false
+            if hasKey {
+                NotificationManager.shared.requestPermissionIfNeeded()
+            }
         }
     }
 }

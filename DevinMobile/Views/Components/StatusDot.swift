@@ -29,3 +29,25 @@ struct StatusDot: View {
             }
     }
 }
+
+/// Larger status icon using SF Symbols with native pulse effect for active states.
+struct StatusIcon: View {
+    let status: SessionStatus
+
+    private var shouldPulse: Bool {
+        switch status {
+        case .running, .working, .resumed, .resumeRequested, .resumeRequestedFrontend:
+            true
+        default:
+            false
+        }
+    }
+
+    var body: some View {
+        Image(systemName: status.systemImage)
+            .font(.title3)
+            .foregroundStyle(status.color)
+            .symbolEffect(.pulse, isActive: shouldPulse)
+            .frame(width: 28, alignment: .center)
+    }
+}

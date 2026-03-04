@@ -2,36 +2,41 @@ import SwiftUI
 
 struct SessionListView: View {
     @State private var viewModel = SessionListViewModel()
+    @State private var navigationPath = NavigationPath()
     @Environment(\.persistenceManager) private var persistence
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        NavigationStack {
-            Group {
-                switch viewModel.loadingState {
-                case .idle, .loading:
-                    if viewModel.sessions.isEmpty {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        sessionList
-                    }
-                case .loaded:
-                    if viewModel.filteredSessions.isEmpty {
-                        emptyState
-                    } else {
-                        sessionList
-                    }
-                case .error(let info):
-                    ContentUnavailableView {
-                        Label("Unable to Load", systemImage: info.systemImage)
-                    } description: {
-                        Text(info.message)
-                    } actions: {
-                        Button(info.actionLabel) {
-                            Task { await viewModel.loadSessions() }
+        NavigationStack(path: $navigationPath) {
+            VStack(spacing: 0) {
+                filterBar
+
+                Group {
+                    switch viewModel.loadingState {
+                    case .idle, .loading:
+                        if viewModel.sessions.isEmpty {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else {
+                            sessionList
                         }
-                        .buttonStyle(.bordered)
+                    case .loaded:
+                        if viewModel.filteredSessions.isEmpty {
+                            emptyState
+                        } else {
+                            sessionList
+                        }
+                    case .error(let info):
+                        ContentUnavailableView {
+                            Label("Unable to Load", systemImage: info.systemImage)
+                        } description: {
+                            Text(info.message)
+                        } actions: {
+                            Button(info.actionLabel) {
+                                Task { await viewModel.loadSessions() }
+                            }
+                            .buttonStyle(.bordered)
+                        }
                     }
                 }
             }
@@ -80,7 +85,7 @@ struct SessionListView: View {
             .onChange(of: scenePhase) { _, newPhase in
                 switch newPhase {
                 case .active:
-                    viewModel.startPolling()
+                    viewModel.resumeAndPoll()
                 case .inactive, .background:
                     viewModel.stopPolling()
                 @unknown default:
@@ -88,26 +93,37 @@ struct SessionListView: View {
                 }
             }
             .toastOverlay(toast: $viewModel.toast)
+            .onReceive(NotificationCenter.default.publisher(for: .didTapSessionNotification)) { notification in
+                guard let sessionId = notification.userInfo?["sessionId"] as? String else { return }
+                // Find the session in our loaded list, or create a minimal one for navigation
+                if let session = viewModel.sessions.first(where: { $0.sessionId == sessionId }) {
+                    navigationPath.append(session)
+                }
+                NotificationManager.shared.clearNotifications(for: sessionId)
+            }
         }
+    }
+
+    private var filterBar: some View {
+        HStack(spacing: 8) {
+            if !viewModel.availableRepos.isEmpty {
+                RepoFilterButton(
+                    repos: viewModel.availableRepos,
+                    selectedRepo: $viewModel.selectedRepo
+                )
+
+                Divider()
+                    .frame(height: 20)
+            }
+
+            StatusFilterChips(selected: $viewModel.statusFilter)
+        }
+        .padding(.leading, viewModel.availableRepos.isEmpty ? 0 : 16)
+        .padding(.vertical, 8)
     }
 
     private var sessionList: some View {
         List {
-            VStack(alignment: .leading, spacing: 8) {
-                StatusFilterChips(selected: $viewModel.statusFilter)
-
-                if !viewModel.availableRepos.isEmpty {
-                    RepoFilterButton(
-                        repos: viewModel.availableRepos,
-                        selectedRepo: $viewModel.selectedRepo
-                    )
-                    .padding(.horizontal)
-                }
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets())
-
             ForEach(viewModel.filteredSessions) { session in
                 NavigationLink(value: session) {
                     SessionRowView(session: session)

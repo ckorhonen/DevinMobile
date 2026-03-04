@@ -49,21 +49,11 @@ struct RepoFilterButton: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                Text(displayText)
-                    .lineLimit(1)
-            }
-            .font(.subheadline)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                selectedRepo == .all
-                    ? Color(.systemGray6)
-                    : Color.devinBlue.opacity(0.15)
-            )
-            .foregroundStyle(selectedRepo == .all ? Color.secondary : Color.devinBlue)
-            .clipShape(Capsule())
+            Image(systemName: selectedRepo == .all
+                  ? "line.3.horizontal.decrease.circle"
+                  : "line.3.horizontal.decrease.circle.fill")
+                .font(.title3)
+                .foregroundStyle(selectedRepo == .all ? Color.secondary : Color.devinBlue)
         }
     }
 }

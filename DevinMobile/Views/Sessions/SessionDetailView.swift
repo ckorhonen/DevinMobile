@@ -3,6 +3,7 @@ import SwiftUI
 struct SessionDetailView: View {
     @State private var viewModel: SessionDetailViewModel
     @State private var showPRSheet = false
+    @State private var showCompactTitle = false
     @FocusState private var isComposerFocused: Bool
     @Environment(\.persistenceManager) private var persistence
     @Environment(\.openURL) private var openURL
@@ -21,6 +22,7 @@ struct SessionDetailView: View {
             }
         .navigationTitle(viewModel.session?.title ?? "Session")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(showCompactTitle ? .automatic : .hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 if let session = viewModel.session {
@@ -30,6 +32,8 @@ struct SessionDetailView: View {
                             .lineLimit(1)
                         StatusBadge(status: session.resolvedStatus)
                     }
+                    .opacity(showCompactTitle ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: showCompactTitle)
                 }
             }
             ToolbarItemGroup(placement: .primaryAction) {
@@ -131,32 +135,59 @@ struct SessionDetailView: View {
     private var scrollableMessages: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 16) {
-                    let turns = viewModel.messageTurns
-                    ForEach(Array(turns.enumerated()), id: \.element.first?.id) { index, turn in
-                        let isLastDevin = turn.first?.resolvedSource == .devin && index == turns.count - 1
-                        MessageBubbleView(
-                            messages: turn,
-                            isLastDevinTurn: isLastDevin,
-                            sessionStatus: viewModel.session?.resolvedStatus
+                VStack(spacing: 0) {
+                    // Hero header with generative background
+                    if let session = viewModel.session {
+                        SessionHeroHeader(
+                            session: session,
+                            pullRequests: viewModel.allPullRequests
+                        )
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onChange(of: geo.frame(in: .named("scroll")).minY) { _, newY in
+                                        let threshold: CGFloat = -100
+                                        let shouldShow = newY < threshold
+                                        if shouldShow != showCompactTitle {
+                                            showCompactTitle = shouldShow
+                                        }
+                                    }
+                            }
                         )
                     }
 
-                    if viewModel.isSessionActive {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("Devin is working...")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    LazyVStack(spacing: 16) {
+                        let turns = viewModel.messageTurns
+                        ForEach(Array(turns.enumerated()), id: \.element.first?.id) { index, turn in
+                            let isLastDevin = turn.first?.resolvedSource == .devin && index == turns.count - 1
+                            MessageBubbleView(
+                                messages: turn,
+                                isLastDevinTurn: isLastDevin,
+                                sessionStatus: viewModel.session?.resolvedStatus
+                            )
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading, 4)
-                        .transition(.opacity)
-                        .id("bottom-indicator")
+
+                        if viewModel.isSessionActive {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("Devin is working...")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.leading, 4)
+                            .transition(.opacity)
+                            .id("bottom-indicator")
+                        }
                     }
+                    .padding()
                 }
-                .padding()
+            }
+            .coordinateSpace(name: "scroll")
+            .scrollDismissesKeyboard(.interactively)
+            .onTapGesture {
+                isComposerFocused = false
             }
             .onChange(of: viewModel.messages.count) {
                 withAnimation {

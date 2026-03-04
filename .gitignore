@@ -14,3 +14,10 @@ Packages/
 
 # CocoaPods (not used, but just in case)
 Pods/
+
+# Secrets
+.env
+Local.xcconfig
+*.p8
+*.p12
+*.mobileprovision
