@@ -34,7 +34,7 @@ struct AttachmentThumbnailView: View {
                 Image(systemName: "xmark.circle.fill")
                     .font(.caption)
                     .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, .red)
+                    .foregroundStyle(.white, Color.devinRed)
             }
             .offset(x: 6, y: -6)
         }

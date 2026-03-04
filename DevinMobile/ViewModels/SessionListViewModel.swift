@@ -213,12 +213,13 @@ final class SessionListViewModel {
 
     func loadMoreIfNeeded(currentItem: Session) async {
         guard hasMore, !isLoadingMore else { return }
-        guard let lastItem = filteredSessions.last, lastItem.id == currentItem.id else { return }
+        guard let lastItem = sessions.last, lastItem.id == currentItem.id else { return }
 
         isLoadingMore = true
         defer { isLoadingMore = false }
 
-        if useV3, let cursor = endCursor {
+        if useV3 {
+            guard let cursor = endCursor else { return }
             do {
                 let response: PaginatedResponse<V3SessionItem> = try await APIClient.shared.perform(
                     .listSessionsV3(first: 50, after: cursor)
@@ -290,6 +291,15 @@ final class SessionListViewModel {
     }
 
     // MARK: - Polling
+
+    /// Immediately fetches fresh data then starts the 30s polling loop.
+    /// Call on scene phase `.active` to eliminate the 30s stale-data gap.
+    func resumeAndPoll() {
+        Task {
+            await pollSessions()
+        }
+        startPolling()
+    }
 
     func startPolling() {
         guard pollingTask == nil else { return }

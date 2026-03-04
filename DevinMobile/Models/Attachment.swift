@@ -1,6 +1,6 @@
 import Foundation
 
-struct PendingAttachment: Identifiable, Sendable {
+struct PendingAttachment: Codable, Identifiable, Sendable {
     let id = UUID()
     let data: Data
     let fileName: String

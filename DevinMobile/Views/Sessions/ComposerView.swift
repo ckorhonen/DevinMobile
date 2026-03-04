@@ -25,16 +25,8 @@ struct ComposerView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
-        .background {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.regularMaterial)
-                .shadow(color: .black.opacity(0.1), radius: 8, y: -2)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(.separator, lineWidth: 0.5)
-                }
-        }
-        .padding(.horizontal, 12)
+        .glassEffect(.regular, in: .capsule)
+        .padding(.horizontal, 16)
         .padding(.bottom, 8)
         .photosPicker(
             isPresented: $showPhotoPicker,
@@ -79,6 +71,7 @@ struct ComposerView: View {
 
     private var sendButton: some View {
         Button {
+            isFocused = false
             Task { await viewModel.sendMessage() }
         } label: {
             Image(systemName: "arrow.up.circle.fill")
@@ -86,7 +79,7 @@ struct ComposerView: View {
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(
                     .white,
-                    viewModel.canSend ? Color.devinGreen : .gray
+                    viewModel.canSend ? Color.devinGreen : Color.devinGray
                 )
         }
         .disabled(!viewModel.canSend || viewModel.isSending)

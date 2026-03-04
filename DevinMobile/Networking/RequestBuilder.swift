@@ -54,7 +54,11 @@ enum RequestBuilder {
 
         var body = Data()
         body.append("--\(boundary)\r\n")
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n")
+        let safeName = fileName
+            .replacingOccurrences(of: "\"", with: "")
+            .replacingOccurrences(of: "\r", with: "")
+            .replacingOccurrences(of: "\n", with: "")
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(safeName)\"\r\n")
         body.append("Content-Type: \(mimeType)\r\n\r\n")
         body.append(fileData)
         body.append("\r\n--\(boundary)--\r\n")
