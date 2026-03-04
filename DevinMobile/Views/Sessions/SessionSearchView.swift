@@ -21,7 +21,7 @@ struct SessionSearchView: View {
                     List {
                         ForEach(results) { session in
                             NavigationLink(value: session) {
-                                SessionRowView(session: session)
+                                SessionRowView(session: session, category: persistence?.cachedSessionAI(for: session.sessionId).category)
                             }
                         }
                     }
