@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct ComposerView: View {
     @Bindable var viewModel: SessionDetailViewModel
     @FocusState.Binding var isFocused: Bool
+    var visibleActions: [QuickAction] = []
 
     @State private var showAttachmentMenu = false
     @State private var showPhotoPicker = false
@@ -13,6 +14,15 @@ struct ComposerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if !visibleActions.isEmpty {
+                QuickActionChipsView(actions: visibleActions) { action in
+                    viewModel.messageText = action.prompt
+                    isFocused = false
+                    Task { await viewModel.sendMessage() }
+                }
+                .padding(.vertical, 6)
+            }
+
             if !viewModel.pendingAttachments.isEmpty {
                 attachmentPreviewStrip
             }

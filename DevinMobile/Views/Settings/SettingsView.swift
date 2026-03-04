@@ -88,6 +88,12 @@ struct SettingsView: View {
                     } label: {
                         Label("Playbooks", systemImage: "play.rectangle.on.rectangle")
                     }
+
+                    NavigationLink {
+                        QuickActionsSettingsView()
+                    } label: {
+                        Label("Quick Actions", systemImage: "bolt.fill")
+                    }
                 }
 
                 Section("Organization") {

@@ -8,6 +8,7 @@ struct DevinMobileApp: App {
 
     let container: ModelContainer
     let persistenceManager: PersistenceManager
+    let quickActionsStore = QuickActionsStore()
 
     init() {
         let schema = Schema([
@@ -37,6 +38,7 @@ struct DevinMobileApp: App {
         WindowGroup {
             AuthGate()
                 .environment(\.persistenceManager, persistenceManager)
+                .environment(\.quickActionsStore, quickActionsStore)
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, newPhase in

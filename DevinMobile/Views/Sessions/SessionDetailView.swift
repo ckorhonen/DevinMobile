@@ -6,6 +6,7 @@ struct SessionDetailView: View {
     @State private var showCompactTitle = false
     @FocusState private var isComposerFocused: Bool
     @Environment(\.persistenceManager) private var persistence
+    @Environment(\.quickActionsStore) private var quickActionsStore
     @Environment(\.openURL) private var openURL
 
     init(sessionId: String, initialSession: Session? = nil) {
@@ -15,10 +16,22 @@ struct SessionDetailView: View {
         }
     }
 
+    private var visibleActions: [QuickAction] {
+        guard viewModel.isSessionActive, let store = quickActionsStore else { return [] }
+        return store.visibleActions(
+            status: viewModel.session?.resolvedStatus,
+            hasPR: !viewModel.allPullRequests.isEmpty
+        )
+    }
+
     var body: some View {
         messageList
             .safeAreaInset(edge: .bottom) {
-                ComposerView(viewModel: viewModel, isFocused: $isComposerFocused)
+                ComposerView(
+                    viewModel: viewModel,
+                    isFocused: $isComposerFocused,
+                    visibleActions: visibleActions
+                )
             }
         .navigationTitle(viewModel.session?.title ?? "Session")
         .navigationBarTitleDisplayMode(.inline)
