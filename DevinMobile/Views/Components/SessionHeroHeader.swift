@@ -5,6 +5,7 @@ import SwiftUI
 struct SessionHeroHeader: View {
     let session: Session
     let pullRequests: [V3PullRequest]
+    var category: SessionCategory?
 
     private var status: SessionStatus { session.resolvedStatus }
 
@@ -35,46 +36,47 @@ struct SessionHeroHeader: View {
                     .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
 
                 // Stat pills
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        if let acus = session.acusConsumed, acus > 0 {
-                            StatPill(
-                                icon: "bolt.fill",
-                                value: String(format: "%.1f ACU", acus),
-                                color: .white,
-                                style: .glass
-                            )
-                        }
+                FlowLayout(spacing: 8) {
+                    if let acus = session.acusConsumed, acus > 0 {
+                        StatPill(
+                            icon: "bolt.fill",
+                            value: String(format: "%.1f ACU", acus),
+                            color: .devinGreen
+                        )
+                    }
 
-                        if let created = session.createdAt {
-                            StatPill(
-                                icon: "clock",
-                                value: created.asRelativeDate,
-                                color: .white,
-                                style: .glass
-                            )
-                        }
+                    if let created = session.createdAt {
+                        StatPill(
+                            icon: "clock",
+                            value: created.asRelativeDate,
+                            color: .devinGray
+                        )
+                    }
 
-                        if let pr = pullRequests.first {
-                            let state = pr.resolvedState
-                            StatPill(
-                                icon: "arrow.triangle.pull",
-                                value: [pr.shortRepoName, pr.displayLabel]
-                                    .compactMap { $0 }
-                                    .joined(separator: " "),
-                                color: .white,
-                                style: .glass
-                            )
-                        }
+                    if let pr = pullRequests.first {
+                        StatPill(
+                            icon: "arrow.triangle.pull",
+                            value: [pr.shortRepoName, pr.displayLabel]
+                                .compactMap { $0 }
+                                .joined(separator: " "),
+                            color: pr.resolvedState.color
+                        )
+                    }
 
-                        if let tags = session.tags, !tags.isEmpty {
-                            StatPill(
-                                icon: "tag",
-                                value: tags.count == 1 ? tags[0] : "\(tags.count) tags",
-                                color: .white,
-                                style: .glass
-                            )
-                        }
+                    if let category {
+                        StatPill(
+                            icon: category.systemImage,
+                            value: category.label,
+                            color: category.color
+                        )
+                    }
+
+                    if let tags = session.tags, !tags.isEmpty {
+                        StatPill(
+                            icon: "tag",
+                            value: tags.count == 1 ? tags[0] : "\(tags.count) tags",
+                            color: .devinBlue
+                        )
                     }
                 }
             }

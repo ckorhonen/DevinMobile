@@ -71,10 +71,25 @@ struct SessionDetailView: View {
                     }
                 }
             }
+            ToolbarItem(placement: .secondaryAction) {
+                if !viewModel.isSessionActive && !viewModel.messages.isEmpty {
+                    Button {
+                        Task { await viewModel.generateKnowledgeNoteDraft() }
+                    } label: {
+                        if viewModel.isGeneratingKnowledgeNote {
+                            ProgressView()
+                        } else {
+                            Label("Create Knowledge Note", systemImage: "sparkles")
+                        }
+                    }
+                    .disabled(viewModel.isGeneratingKnowledgeNote)
+                }
+            }
         }
         .task {
             if let persistence { viewModel.configure(persistence: persistence) }
             await viewModel.loadSessionAndMessages()
+            await viewModel.generateAIInsights()
         }
         .onAppear {
             viewModel.startPolling()
@@ -95,6 +110,15 @@ struct SessionDetailView: View {
         .toastOverlay(toast: $viewModel.toast)
         .sheet(isPresented: $showPRSheet) {
             PRDetailSheet(pullRequests: viewModel.allPullRequests)
+        }
+        .sheet(isPresented: $viewModel.showKnowledgeNoteEditor) {
+            if let draft = viewModel.knowledgeNoteDraft {
+                NoteEditorView(
+                    prefilledName: draft.name,
+                    prefilledBody: draft.body,
+                    prefilledTrigger: draft.trigger
+                )
+            }
         }
     }
 
@@ -140,7 +164,8 @@ struct SessionDetailView: View {
                     if let session = viewModel.session {
                         SessionHeroHeader(
                             session: session,
-                            pullRequests: viewModel.allPullRequests
+                            pullRequests: viewModel.allPullRequests,
+                            category: viewModel.category
                         )
                         .background(
                             GeometryReader { geo in
@@ -154,6 +179,13 @@ struct SessionDetailView: View {
                                     }
                             }
                         )
+                    }
+
+                    // AI Summary
+                    if let summary = viewModel.summary {
+                        SessionSummaryView(summary: summary)
+                    } else if viewModel.isGeneratingAI {
+                        SessionSummaryView(summary: "", isGenerating: true)
                     }
 
                     LazyVStack(spacing: 16) {
@@ -184,6 +216,7 @@ struct SessionDetailView: View {
                     .padding()
                 }
             }
+            .contentMargins(.top, 0, for: .scrollContent)
             .coordinateSpace(name: "scroll")
             .scrollDismissesKeyboard(.interactively)
             .onTapGesture {

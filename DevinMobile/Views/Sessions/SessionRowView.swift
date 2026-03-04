@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionRowView: View {
     let session: Session
+    var category: SessionCategory?
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -39,6 +40,10 @@ struct SessionRowView: View {
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
                         .background(state.color.opacity(0.15), in: Capsule())
+                    }
+
+                    if let category {
+                        CategoryPill(category: category)
                     }
 
                     if session.allPullRequests.count > 1 {
