@@ -19,7 +19,9 @@ struct StatPill: View {
             Text(value)
                 .font(.caption)
                 .fontWeight(.medium)
+                .lineLimit(1)
         }
+        .fixedSize()
         .foregroundStyle(color)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)

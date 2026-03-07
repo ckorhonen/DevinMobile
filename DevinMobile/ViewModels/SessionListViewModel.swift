@@ -74,6 +74,7 @@ final class SessionListViewModel {
     var showArchived = false
     var toast: ToastItem?
     var isRefreshing = false
+    var sessionCategories: [String: SessionCategory] = [:]
 
     // Pagination
     private var endCursor: String?
@@ -246,6 +247,44 @@ final class SessionListViewModel {
                 loadingState = .loaded(sessions)
             } catch {
                 // Silent fail
+            }
+        }
+    }
+
+    // MARK: - AI Categories
+
+    func generateMissingCategories() async {
+        guard await FoundationModelService.shared.isAvailable else { return }
+
+        // Pre-populate from cache
+        if let persistence {
+            for session in sessions {
+                if sessionCategories[session.sessionId] == nil,
+                   let category = persistence.cachedSessionAI(for: session.sessionId).category {
+                    sessionCategories[session.sessionId] = category
+                }
+            }
+        }
+
+        // Find sessions that still need categories
+        let uncategorized = sessions.filter { sessionCategories[$0.sessionId] == nil }
+        guard !uncategorized.isEmpty else { return }
+
+        for session in uncategorized {
+            guard !Task.isCancelled else { break }
+            do {
+                let category = try await FoundationModelService.shared.categorize(
+                    title: session.title,
+                    messages: []
+                )
+                sessionCategories[session.sessionId] = category
+                persistence?.updateSessionAI(
+                    sessionId: session.sessionId,
+                    category: category.rawValue,
+                    summary: nil
+                )
+            } catch {
+                continue
             }
         }
     }

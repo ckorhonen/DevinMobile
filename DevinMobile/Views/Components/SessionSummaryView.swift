@@ -16,7 +16,7 @@ struct SessionSummaryView: View {
                     .foregroundStyle(.tertiary)
                     .italic()
             } else {
-                Text(summary)
+                Text(markdownSummary)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -24,5 +24,9 @@ struct SessionSummaryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
         .padding(.vertical, 10)
+    }
+
+    private var markdownSummary: AttributedString {
+        (try? AttributedString(markdown: summary)) ?? AttributedString(summary)
     }
 }
