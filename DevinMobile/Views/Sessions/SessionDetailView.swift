@@ -184,7 +184,7 @@ struct SessionDetailView: View {
                             GeometryReader { geo in
                                 Color.clear
                                     .onChange(of: geo.frame(in: .named("scroll")).minY) { _, newY in
-                                        let threshold: CGFloat = -100
+                                        let threshold: CGFloat = -40
                                         let shouldShow = newY < threshold
                                         if shouldShow != showCompactTitle {
                                             showCompactTitle = shouldShow

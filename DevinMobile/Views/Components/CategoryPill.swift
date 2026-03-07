@@ -10,7 +10,9 @@ struct CategoryPill: View {
             Text(category.label)
                 .font(.caption2)
                 .fontWeight(.medium)
+                .lineLimit(1)
         }
+        .fixedSize()
         .foregroundStyle(category.color)
         .padding(.horizontal, 7)
         .padding(.vertical, 2)
